@@ -14,7 +14,7 @@ npm run build:standalone   # regenerate standalone dist-standalone/kisetsucho.ht
 
 ## Architecture in one paragraph
 
-React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is the orchestrator: no router — `view` state machine (browse/search/list/stats) + modal overlays (detail, seiyuu, settings), all entry mutations through one `mutate()` helper. Around it: `src/api/anilist.js` (gql + dynamic query builders + `PER_PAGE`/`MAX_AUTO_PAGES` rate-limit constants), `src/api/tmdb.js` (matcher + details), `src/constants.js` (JA label maps), `src/utils.js`, `src/storage.js` (keys + JSON helpers), `src/env.js` (TMDB key default from `.env.local`, read lazily — see its comment), `src/components/` (controls, AnimeCard, TmdbSection, DetailModal, SeiyuuModal, SettingsModal, StatsView), `src/styles.css`. Data: AniList GraphQL (no auth; browsing/search/detail/cast/relations) + TMDB REST (key; Japanese synopses + JP streaming providers via JustWatch data). Persistence: `window.storage` abstraction (shimmed to localStorage in `src/main.jsx`) under `kisetsucho:*` keys; ledger schema and export format in HANDOFF §5. The standalone build is `scripts/build_standalone.mjs` (real Vite build inlined into one HTML file; replaced the retired chat-era `build_html.py`).
+React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is the orchestrator: no router — `view` state machine (browse/search/list/stats) + modal overlays (detail, seiyuu, settings), all entry mutations through one `mutate()` helper. Around it: `src/api/anilist.js` (gql + dynamic query builders + `PER_PAGE`/`MAX_AUTO_PAGES` rate-limit constants), `src/api/tmdb.js` (matcher + details), `src/api/annict.js` (bearer-auth gql + idMal join + work details), `src/constants.js` (JA label maps), `src/utils.js`, `src/storage.js` (keys + JSON helpers), `src/env.js` (TMDB key default from `.env.local`, read lazily — see its comment), `src/components/` (controls, AnimeCard, TmdbSection, DetailModal, SeiyuuModal, SettingsModal, StatsView), `src/styles.css`. Data: AniList GraphQL (no auth; browsing/search/detail/cast/relations) + TMDB REST (key; Japanese synopses + JP streaming providers via JustWatch data). Persistence: `window.storage` abstraction (shimmed to localStorage in `src/main.jsx`) under `kisetsucho:*` keys; ledger schema and export format in HANDOFF §5. The standalone build is `scripts/build_standalone.mjs` (real Vite build inlined into one HTML file; replaced the retired chat-era `build_html.py`).
 
 ## Hard invariants (HANDOFF §13 — never violate)
 
@@ -29,10 +29,10 @@ React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is 
 
 ## Gotchas
 
-- `idMal` is NOT yet in `MEDIA_FIELDS` — required first step for Annict work (HANDOFF §10.1).
-- Annict seasons: lowercase `"2026-summer"`, and uses `autumn` where AniList uses `FALL`. Annict CORS is unverified — test a bare fetch before building on it.
+- `idMal` is in `MEDIA_FIELDS` and is the Annict join key (`Media.idMal` ↔ `Work.malAnimeId`). Annict's `searchWorks` has **no MAL-id filter** — `findAnnictWork` (api/annict.js) searches by title then season and verifies `malAnimeId` client-side; resolved ids cached in `kisetsucho:annictmap` (match once, cache, fixable later — same contract as tmdbmap).
+- Annict seasons: lowercase `"2026-summer"`, and uses `autumn` where AniList uses `FALL` (`SEASON_TO_ANNICT` in api/annict.js). CORS on api.annict.com is **verified open** (2026-07 browser probe) — direct browser calls, no proxy needed.
 - TMDB files multi-cour anime under the first air year → matcher retries without year; matches cached in `kisetsucho:tmdbmap` with a user-facing correction UI. Preserve "match once, cache, user can fix".
-- Secrets: TMDB key → `.env.local` (`VITE_TMDB_KEY`, gitignored); future Annict token → storage-only via settings, never in source or exports.
+- Secrets: TMDB key → `.env.local` (`VITE_TMDB_KEY`, gitignored); Annict token → storage-only via ⚙ settings (`kisetsucho:settings.annictToken`), never in source or exports.
 - The user's real data exists — treat `kisetsucho:entries` and export files as precious; when in doubt, export first.
 
 ## Verification before any commit (HANDOFF §9)

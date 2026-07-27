@@ -6,6 +6,7 @@ const MAX_AUTO_PAGES = 12;
 
 const MEDIA_FIELDS = `
   id
+  idMal
   title { native romaji english }
   description
   coverImage { large color }

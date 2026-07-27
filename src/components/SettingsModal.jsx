@@ -4,6 +4,7 @@ import { useState } from "react";
 
 function SettingsModal({ settings, onSave, onClose }) {
   const [key, setKey] = useState(settings.tmdbKey || "");
+  const [annict, setAnnict] = useState(settings.annictToken || "");
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -24,8 +25,27 @@ function SettingsModal({ settings, onSave, onClose }) {
             autoComplete="off"
           />
         </section>
+        <section className="modal-section">
+          <h4>Annictトークン</h4>
+          <p className="fine">
+            日本のTV放送情報・満足度・スタッフ情報の取得に使用します。
+            annict.com の「設定 → デベロッパー」で個人用アクセストークンを作成できます（読み込み専用でOK）。
+            この端末のブラウザにのみ保存されます。
+          </p>
+          <input
+            className="settings-input"
+            type="text"
+            value={annict}
+            onChange={(e) => setAnnict(e.target.value)}
+            placeholder="Annict Access Token"
+            autoComplete="off"
+          />
+        </section>
         <div className="settings-actions">
-          <button className="toolbar-btn on" onClick={() => { onSave({ ...settings, tmdbKey: key.trim() }); onClose(); }}>
+          <button
+            className="toolbar-btn on"
+            onClick={() => { onSave({ ...settings, tmdbKey: key.trim(), annictToken: annict.trim() }); onClose(); }}
+          >
             保存
           </button>
         </div>

@@ -4,11 +4,12 @@ import { GENRES, FORMAT_JA, RELATION_JA } from "../constants.js";
 import { seasonJa, airDateLine, officialLink, infoLinks, anilistStreamingLinks } from "../utils.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./controls.jsx";
 import TmdbSection from "./TmdbSection.jsx";
+import AnnictSection from "./AnnictSection.jsx";
 
 /* ---------- detail modal ---------- */
 
 function DetailModal({
-  id, entry, tmdbKey, tmdbMap, onMap, showAdult,
+  id, entry, tmdbKey, tmdbMap, onMap, annictToken, annictMap, onAnnictMap, showAdult,
   onClose, onSet, onRate, onDate, onRewatch, onProgress, onMemo, onOpen, onOpenSeiyuu,
 }) {
   const [data, setData] = useState(null);
@@ -98,6 +99,13 @@ function DetailModal({
               onMap={onMap}
               anilistDescription={data.description}
               anilistStreams={anilistStreamingLinks(data)}
+            />
+
+            <AnnictSection
+              media={data}
+              token={annictToken}
+              mapEntry={annictMap[data.id]}
+              onMap={onAnnictMap}
             />
 
             {data.characters?.edges?.length > 0 && (

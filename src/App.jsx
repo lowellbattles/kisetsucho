@@ -14,7 +14,7 @@ import {
 import { defaultTmdbKey } from "./env.js";
 import { gql, buildBrowseQuery, buildSearchQuery, PER_PAGE, MAX_AUTO_PAGES } from "./api/anilist.js";
 import { today, currentSeason, seasonJa } from "./utils.js";
-import { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, storageGetJson, storageSetJson } from "./storage.js";
+import { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, storageGetJson, storageSetJson } from "./storage.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./components/controls.jsx";
 import AnimeCard from "./components/AnimeCard.jsx";
 import DetailModal from "./components/DetailModal.jsx";
@@ -56,6 +56,7 @@ export default function App() {
   const [settings, setSettings] = useState(() => ({ tmdbKey: defaultTmdbKey() }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
+  const [annictMap, setAnnictMap] = useState({});
 
   const seasonMeta = SEASONS.find((s) => s.key === season);
   const scopeMeta = SCOPE_TABS.find((s) => s.key === scope);
@@ -65,14 +66,16 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [e, s, m] = await Promise.all([
+      const [e, s, m, am] = await Promise.all([
         storageGetJson(STORE_KEY, {}),
         storageGetJson(SETTINGS_KEY, null),
         storageGetJson(TMDBMAP_KEY, {}),
+        storageGetJson(ANNICTMAP_KEY, {}),
       ]);
       setEntries(e);
       if (s) setSettings((prev) => ({ ...prev, ...s }));
       setTmdbMap(m);
+      setAnnictMap(am);
       setReady(true);
     })();
   }, []);
@@ -82,6 +85,12 @@ export default function App() {
     setTmdbMap((prev) => {
       const next = { ...prev, [anilistId]: val };
       storageSetJson(TMDBMAP_KEY, next);
+      return next;
+    });
+  const updateAnnictMap = (anilistId, val) =>
+    setAnnictMap((prev) => {
+      const next = { ...prev, [anilistId]: val };
+      storageSetJson(ANNICTMAP_KEY, next);
       return next;
     });
 
@@ -654,6 +663,9 @@ export default function App() {
           tmdbKey={settings.tmdbKey}
           tmdbMap={tmdbMap}
           onMap={updateTmdbMap}
+          annictToken={settings.annictToken || ""}
+          annictMap={annictMap}
+          onAnnictMap={updateAnnictMap}
           showAdult={showAdult}
           onClose={() => setDetailId(null)}
           onOpen={(id) => { setSeiyuuId(null); setDetailId(id); }}
@@ -685,7 +697,7 @@ export default function App() {
       )}
 
       <footer className="footer">
-        データ提供：AniList ・ 日本語あらすじ：TMDB ・ 配信情報：JustWatch（TMDB経由）・ 記録はこのブラウザに保存されます（エクスポートでバックアップ可能）
+        データ提供：AniList ・ 日本語あらすじ：TMDB ・ 配信情報：JustWatch（TMDB経由）・ 放送情報：Annict ・ 記録はこのブラウザに保存されます（エクスポートでバックアップ可能）
       </footer>
     </div>
   );

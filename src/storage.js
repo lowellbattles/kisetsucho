@@ -1,6 +1,7 @@
 const STORE_KEY = "kisetsucho:entries";
 const SETTINGS_KEY = "kisetsucho:settings";
 const TMDBMAP_KEY = "kisetsucho:tmdbmap";
+const ANNICTMAP_KEY = "kisetsucho:annictmap";
 
 /* ---------- persistence ---------- */
 
@@ -21,4 +22,4 @@ async function storageSetJson(key, value) {
   }
 }
 
-export { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, storageGetJson, storageSetJson };
+export { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, storageGetJson, storageSetJson };
