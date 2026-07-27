@@ -6,7 +6,7 @@ Single user, lives in Japan, watches in Japanese. **Read `HANDOFF.md` before any
 ## Commands
 
 ```bash
-npm run dev                # Vite dev server → http://localhost:5173
+npm run dev                # Vite dev server → http://localhost:6173 (fixed port, strictPort)
 npm run build              # production build (must pass before commit)
 npm run check:queries      # §9.2 query-builder brace balance (all 26 combinations)
 npm run build:standalone   # regenerate standalone dist-standalone/kisetsucho.html (keyless by design)
