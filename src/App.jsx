@@ -23,6 +23,7 @@ import AnimeCard from "./components/AnimeCard.jsx";
 import DetailModal from "./components/DetailModal.jsx";
 import SeiyuuModal from "./components/SeiyuuModal.jsx";
 import SettingsModal from "./components/SettingsModal.jsx";
+import SyncModal from "./components/SyncModal.jsx";
 import StatsView from "./components/StatsView.jsx";
 
 /* ---------- main app ---------- */
@@ -60,6 +61,7 @@ export default function App() {
   const [backupSnooze, setBackupSnooze] = useState(null);
   const [settings, setSettings] = useState(() => ({ tmdbKey: defaultTmdbKey() }));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
   const [annictMap, setAnnictMap] = useState({});
 
@@ -622,6 +624,9 @@ export default function App() {
               {listTab === "want" && counts.want > 0 && (
                 <button className="toolbar-btn" onClick={randomPick}>ランダムに選ぶ</button>
               )}
+              {settings.annictToken && (
+                <button className="toolbar-btn" onClick={() => setSyncOpen(true)}>Annictと同期</button>
+              )}
               <button className="toolbar-btn subtle" onClick={exportLedger}>エクスポート</button>
               <button className="toolbar-btn subtle" onClick={() => fileRef.current?.click()}>インポート</button>
               <input
@@ -731,6 +736,24 @@ export default function App() {
           settings={settings}
           onSave={saveSettings}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {syncOpen && (
+        <SyncModal
+          entries={entries}
+          annictMap={annictMap}
+          token={settings.annictToken}
+          onMap={updateAnnictMap}
+          onApplyPull={(list) =>
+            setEntries((prev) => {
+              const next = { ...prev };
+              for (const e of list) next[e.id] = e;
+              storageSetJson(STORE_KEY, next);
+              return next;
+            })
+          }
+          onClose={() => setSyncOpen(false)}
         />
       )}
 

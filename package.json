@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:standalone": "node scripts/build_standalone.mjs",
     "check:queries": "node scripts/check-queries.mjs",
+    "check:sync": "node scripts/check-sync.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

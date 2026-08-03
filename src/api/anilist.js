@@ -100,6 +100,58 @@ query ($id: Int, $page: Int) {
   }
 }`;
 
+/* ---------- batch lookups for the Annict sync ----------
+   Chunked ×PER_PAGE with a 700 ms pause between chunks — the live AniList
+   limit is ~30 req/min (HANDOFF §6.1). Results are non-positional and misses
+   drop silently, so both return a Map keyed by the id that came back. */
+
+const SYNC_STUB_FIELDS = `
+  id
+  idMal
+  title { native romaji }
+  season
+  seasonYear
+`;
+
+const BY_IDS_QUERY = `
+query ($ids: [Int]) {
+  Page(perPage: ${PER_PAGE}) {
+    media(id_in: $ids, type: ANIME) {
+      ${SYNC_STUB_FIELDS}
+    }
+  }
+}`;
+
+const BY_MAL_IDS_QUERY = `
+query ($ids: [Int]) {
+  Page(perPage: ${PER_PAGE}) {
+    media(idMal_in: $ids, type: ANIME) {
+      ${MEDIA_FIELDS}
+    }
+  }
+}`;
+
+async function chunkedMediaLookup(query, ids, keyOf) {
+  const map = new Map();
+  for (let i = 0; i < ids.length; i += PER_PAGE) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 700));
+    const d = await gql(query, { ids: ids.slice(i, i + PER_PAGE) });
+    for (const m of d.Page?.media || []) {
+      const k = keyOf(m);
+      if (k != null) map.set(k, m);
+    }
+  }
+  return map;
+}
+
+/* AniList ids → light stubs (idMal + titles + season) for the Annict matcher —
+   ledger entries don't snapshot idMal, so sync re-reads it here. */
+const fetchMediaByIds = (ids) => chunkedMediaLookup(BY_IDS_QUERY, ids, (m) => m.id);
+
+/* MAL ids → full media (Annict pull sync). Keyed by returned idMal; ids
+   AniList doesn't know are simply absent from the Map. */
+const fetchMediaByMalIds = (malIds) => chunkedMediaLookup(BY_MAL_IDS_QUERY, malIds, (m) => m.idMal);
+
 async function gql(query, variables) {
   const res = await fetch(API, {
     method: "POST",
@@ -114,4 +166,7 @@ async function gql(query, variables) {
   return json.data;
 }
 
-export { gql, buildBrowseQuery, buildSearchQuery, DETAIL_QUERY, STAFF_QUERY, PER_PAGE, MAX_AUTO_PAGES };
+export {
+  gql, buildBrowseQuery, buildSearchQuery, DETAIL_QUERY, STAFF_QUERY,
+  fetchMediaByIds, fetchMediaByMalIds, PER_PAGE, MAX_AUTO_PAGES,
+};

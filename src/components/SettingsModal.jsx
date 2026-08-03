@@ -30,6 +30,7 @@ function SettingsModal({ settings, onSave, onClose }) {
           <p className="fine">
             日本のTV放送情報・満足度・スタッフ情報の取得に使用します。
             annict.com の「設定 → デベロッパー」で個人用アクセストークンを作成できます（読み込み専用でOK）。
+            Annictとの同期（記録画面）には「読み込み + 書き込み」スコープが必要です。
             この端末のブラウザにのみ保存されます。
           </p>
           <input
