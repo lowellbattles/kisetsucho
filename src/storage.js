@@ -2,6 +2,8 @@ const STORE_KEY = "kisetsucho:entries";
 const SETTINGS_KEY = "kisetsucho:settings";
 const TMDBMAP_KEY = "kisetsucho:tmdbmap";
 const ANNICTMAP_KEY = "kisetsucho:annictmap";
+const LASTEXPORT_KEY = "kisetsucho:lastexport";     // Date.now() of last エクスポート
+const BACKUPSNOOZE_KEY = "kisetsucho:backupsnooze"; // Date.now() of last 後で on the backup nudge
 
 /* ---------- persistence ---------- */
 
@@ -22,4 +24,7 @@ async function storageSetJson(key, value) {
   }
 }
 
-export { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, storageGetJson, storageSetJson };
+export {
+  STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, LASTEXPORT_KEY, BACKUPSNOOZE_KEY,
+  storageGetJson, storageSetJson,
+};

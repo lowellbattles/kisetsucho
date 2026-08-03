@@ -1,16 +1,19 @@
-# React + Vite
+# 季節帳 (Kisetsuchō) — Seasonal Anime Ledger
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Personal, login-free, Japanese-primary seasonal anime tracker: a Letterboxd-style private ledger with no social layer. Browse any season back to the 1960s via AniList (no auth), track shows through 見たい / 視聴中 / 視聴済 / 中断 with ratings, dates and memos, and — with optional keys — get Japanese synopses and JP streaming availability from TMDB (JustWatch data) plus Japanese broadcast info and community satisfaction from Annict. Everything is stored in the browser under `kisetsucho:*` keys, with JSON export/import as the backup mechanism.
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm run dev                # Vite dev server → http://localhost:6173 (fixed port, strictPort)
+npm run build              # production build
+npm run check:queries      # query-builder brace balance (all 26 combinations)
+npm run build:standalone   # single-file dist-standalone/kisetsucho.html (keyless by design)
+npm run lint               # oxlint
+```
 
-## React Compiler
+## Docs
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- `HANDOFF.md` — the authoritative spec: architecture, data schema, design system, roadmap, invariants.
+- `CLAUDE.md` — working rules and verification protocol for coding sessions.
+- `DEPLOY.md` — publishing to Vercel and installing on an iPhone home screen.

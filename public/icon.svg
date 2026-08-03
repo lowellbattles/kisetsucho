@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- 季節帳 favicon — same design as icon.svg (the master app icon). -->
+  <!-- 季節帳 app icon (master). Washi-paper tile, 季 in mincho, 印-style seal dot.
+       Maskable-safe: all ink stays inside the central 80% of the tile.
+       PNGs in public/icons/ are rasterized from this via scripts/make-icons.html;
+       keep the copy embedded there in sync with this file. -->
   <rect x="3" y="3" width="506" height="506" rx="96" fill="#FAF9F5" stroke="#E6E3DA" stroke-width="6"/>
   <text x="256" y="256" text-anchor="middle" dominant-baseline="central" font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-weight="600" font-size="300" fill="#23252B">季</text>
   <circle cx="398" cy="404" r="15" fill="#BE5730"/>

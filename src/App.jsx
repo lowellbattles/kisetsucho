@@ -14,7 +14,10 @@ import {
 import { defaultTmdbKey } from "./env.js";
 import { gql, buildBrowseQuery, buildSearchQuery, PER_PAGE, MAX_AUTO_PAGES } from "./api/anilist.js";
 import { today, currentSeason, seasonJa } from "./utils.js";
-import { STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, storageGetJson, storageSetJson } from "./storage.js";
+import {
+  STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, LASTEXPORT_KEY, BACKUPSNOOZE_KEY,
+  storageGetJson, storageSetJson,
+} from "./storage.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./components/controls.jsx";
 import AnimeCard from "./components/AnimeCard.jsx";
 import DetailModal from "./components/DetailModal.jsx";
@@ -53,6 +56,8 @@ export default function App() {
   const [ledgerSort, setLedgerSort] = useState("date");
   const [ioMsg, setIoMsg] = useState(null);
   const fileRef = useRef(null);
+  const [lastExport, setLastExport] = useState(null);
+  const [backupSnooze, setBackupSnooze] = useState(null);
   const [settings, setSettings] = useState(() => ({ tmdbKey: defaultTmdbKey() }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
@@ -66,16 +71,20 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const [e, s, m, am] = await Promise.all([
+      const [e, s, m, am, le, bs] = await Promise.all([
         storageGetJson(STORE_KEY, {}),
         storageGetJson(SETTINGS_KEY, null),
         storageGetJson(TMDBMAP_KEY, {}),
         storageGetJson(ANNICTMAP_KEY, {}),
+        storageGetJson(LASTEXPORT_KEY, null),
+        storageGetJson(BACKUPSNOOZE_KEY, null),
       ]);
       setEntries(e);
       if (s) setSettings((prev) => ({ ...prev, ...s }));
       setTmdbMap(m);
       setAnnictMap(am);
+      setLastExport(le);
+      setBackupSnooze(bs);
       setReady(true);
     })();
   }, []);
@@ -232,6 +241,9 @@ export default function App() {
     a.download = `kisetsucho-${today()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    const now = Date.now();
+    setLastExport(now);
+    storageSetJson(LASTEXPORT_KEY, now); // separate key — never part of the export payload
     setIoMsg("エクスポートしました");
   };
 
@@ -255,6 +267,21 @@ export default function App() {
       }
     };
     r.readAsText(file);
+  };
+
+  /* backup nudge (HANDOFF §10 P2) — gentle periodic エクスポート reminder.
+     Both timestamps live in their own kisetsucho:* keys and never enter the
+     export payload. */
+  const DAY_MS = 24 * 3600 * 1000;
+  const showBackupNudge =
+    view === "list" &&
+    Object.keys(entries).length >= 5 &&
+    (!lastExport || Date.now() - lastExport > 30 * DAY_MS) &&
+    (!backupSnooze || Date.now() - backupSnooze > 7 * DAY_MS);
+  const snoozeBackupNudge = () => {
+    const now = Date.now();
+    setBackupSnooze(now);
+    storageSetJson(BACKUPSNOOZE_KEY, now);
   };
 
   /* random pick from 見たい */
@@ -557,6 +584,17 @@ export default function App() {
 
       {view === "list" && (
         <main className="grid-wrap">
+          {showBackupNudge && (
+            <div className="notice-banner backup-nudge">
+              <span>
+                {lastExport
+                  ? "最後のエクスポートから30日以上経っています。エクスポートでのバックアップをおすすめします。"
+                  : "まだ一度もエクスポートしていません。エクスポートでのバックアップをおすすめします。"}
+                <span className="en-hint">Backup reminder</span>
+              </span>
+              <button className="toolbar-btn subtle" onClick={snoozeBackupNudge}>後で</button>
+            </div>
+          )}
           <div className="list-toolbar">
             <div className="list-tabs">
               {STATUSES.map((s) => (

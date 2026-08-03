@@ -206,6 +206,12 @@
   margin: 16px 22px 0; padding: 12px 16px; border: 1px solid var(--line);
   background: var(--accent-soft); border-radius: 8px; font-size: 13px; line-height: 1.6;
 }
+.notice-banner.backup-nudge {
+  margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.backup-nudge .en-hint { display: block; margin-top: 2px; }
+.backup-nudge .toolbar-btn { flex: none; }
 .error-hint { color: var(--ink-soft); font-size: 12px; }
 .error-inline { color: #A04040; padding: 20px; }
 .en-hint { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 400; }

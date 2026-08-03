@@ -4,10 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FAF9F5" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS: apple-touch-icon outranks manifest icons; ship both (PNGs in public/icons/). -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>季節帳 — Seasonal Anime Ledger</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script type="module">
+      // PWA: register the app-shell service worker (public/sw.js). Guarded so
+      // neither the dev server (import.meta.env.DEV — Vite processes inline
+      // module scripts, so this compiles to a constant) nor the file://
+      // standalone artifact (protocol check) ever registers — only the
+      // deployed http(s) production build does.
+      if (
+        "serviceWorker" in navigator &&
+        !import.meta.env.DEV &&
+        location.protocol.startsWith("http")
+      ) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      }
+    </script>
   </body>
 </html>

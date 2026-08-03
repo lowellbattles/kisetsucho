@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>季節帳 — icon rasterizer</title>
+<!-- Self-contained operator tool: open locally (file:// is fine), no network, no
+     dependencies. Renders the embedded copy of public/icon.svg to the PNG set the
+     PWA manifest and iOS need, then offers download links + base64 for each.
+     Save the four PNGs into public/icons/. Regenerate whenever icon.svg changes
+     (and keep the ICON_SVG string below byte-identical to public/icon.svg). -->
+<style>
+  body { margin: 32px; background: #FAF9F5; color: #23252B;
+         font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif; }
+  h1 { font-size: 20px; font-weight: 600; }
+  .hint { color: #6B6D75; font-size: 13px; max-width: 62em; line-height: 1.7; }
+  code { background: #fff; border: 1px solid #E6E3DA; border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 24px; }
+  .card { background: #fff; border: 1px solid #E6E3DA; border-radius: 10px; padding: 16px; width: 280px; }
+  .card h2 { font-size: 13.5px; margin: 0 0 10px; font-weight: 600; }
+  .card img { width: 128px; height: 128px; display: block; margin-bottom: 10px; border: 1px solid #E6E3DA;
+              background: repeating-conic-gradient(#EEECE6 0% 25%, #fff 0% 50%) 0 0 / 16px 16px; }
+  .card a { font-size: 13px; color: #BE5730; }
+  textarea { width: 100%; height: 72px; margin-top: 10px; font-size: 10px; color: #6B6D75;
+             border: 1px solid #E6E3DA; border-radius: 6px; resize: vertical; }
+  .note { font-size: 11px; color: #6B6D75; margin-top: 8px; line-height: 1.5; }
+  .error { color: #A03D3D; }
+</style>
+</head>
+<body>
+<h1>季節帳 — icon rasterizer</h1>
+<p class="hint">
+  Renders the app icon to PNG at every size the manifest and iOS need. For each icon below:
+  click the download link and save the file into <code>public/icons/</code> under the shown
+  name, or copy its base64 out of the textarea. Needs a system Japanese mincho font for a
+  faithful 季 glyph (Windows: Yu Mincho / macOS &amp; iOS: Hiragino Mincho ProN — both ship
+  with the OS).
+</p>
+<div class="cards" id="cards"></div>
+<script>
+/* Byte-identical copy of public/icon.svg (this page must stay self-contained:
+   on file:// it cannot fetch the real file from disk). */
+var ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 季節帳 app icon (master). Washi-paper tile, 季 in mincho, 印-style seal dot.
+       Maskable-safe: all ink stays inside the central 80% of the tile.
+       PNGs in public/icons/ are rasterized from this via scripts/make-icons.html;
+       keep the copy embedded there in sync with this file. -->
+  <rect x="3" y="3" width="506" height="506" rx="96" fill="#FAF9F5" stroke="#E6E3DA" stroke-width="6"/>
+  <text x="256" y="256" text-anchor="middle" dominant-baseline="central" font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-weight="600" font-size="300" fill="#23252B">季</text>
+  <circle cx="398" cy="404" r="15" fill="#BE5730"/>
+</svg>
+`;
+
+/* fill: paint #FAF9F5 across the whole canvas first (no transparent pixels).
+   scale: how large the artwork is drawn, centered, relative to the canvas. */
+var TARGETS = [
+  { name: "icon-512", size: 512, fill: false, scale: 1,
+    note: "Manifest icon (purpose: any). Transparent corners outside the rounded tile." },
+  { name: "icon-192", size: 192, fill: false, scale: 1,
+    note: "Manifest icon (purpose: any). Transparent corners outside the rounded tile." },
+  { name: "icon-maskable-512", size: 512, fill: true, scale: 0.8,
+    note: "Manifest icon (purpose: maskable): full-bleed paper background, artwork at 80% so any platform mask keeps the ink." },
+  { name: "apple-touch-icon-180", size: 180, fill: true, scale: 1,
+    note: "iOS home-screen icon: full-bleed paper background (iOS renders transparent pixels as black, so none are left)." }
+];
+
+var img = new Image();
+img.onload = function () { TARGETS.forEach(render); };
+img.onerror = function () {
+  var el = document.getElementById("cards");
+  el.className = "error";
+  el.textContent = "SVG failed to load — check the embedded ICON_SVG markup.";
+};
+img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ICON_SVG);
+
+function render(t) {
+  var canvas = document.createElement("canvas");
+  canvas.width = canvas.height = t.size;
+  var ctx = canvas.getContext("2d");
+  if (t.fill) {
+    ctx.fillStyle = "#FAF9F5";
+    ctx.fillRect(0, 0, t.size, t.size);
+  }
+  var draw = t.size * t.scale;
+  var off = (t.size - draw) / 2;
+  ctx.drawImage(img, off, off, draw, draw);
+  var dataUrl = canvas.toDataURL("image/png");
+
+  var card = document.createElement("div");
+  card.className = "card";
+  var h = document.createElement("h2");
+  h.textContent = t.name + ".png（" + t.size + "×" + t.size + "）";
+  var preview = document.createElement("img");
+  preview.src = dataUrl;
+  preview.alt = t.name;
+  var link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = t.name + ".png";
+  link.textContent = "Download " + t.name + ".png";
+  var ta = document.createElement("textarea");
+  ta.readOnly = true;
+  ta.value = dataUrl.split(",")[1]; // raw base64 payload
+  var note = document.createElement("div");
+  note.className = "note";
+  note.textContent = t.note;
+  card.append(h, preview, link, ta, note);
+  document.getElementById("cards").append(card);
+}
+</script>
+</body>
+</html>
