@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { STATUSES } from "../constants.js";
 
 /* ---------- small components ---------- */
@@ -104,19 +105,77 @@ function WatchedControls({ entry, onRate, onDate, onRewatch }) {
   );
 }
 
+/* Memo autosave (HANDOFF §11 #3): debounced save while typing, plus an
+   immediate flush on blur, unmount, and page hide. iOS often backgrounds or
+   kills the page without a blur, so visibilitychange/pagehide flush through
+   flushSync — that runs mutate()'s updater (and its localStorage write)
+   synchronously, before the page can be frozen. */
+const MEMO_DEBOUNCE_MS = 800;
+
 function MemoBox({ entry, onSave }) {
   const [v, setV] = useState(entry?.memo || "");
-  useEffect(() => { setV(entry?.memo || ""); }, [entry?.id, entry?.memo]);
+  const [saved, setSaved] = useState(false);
+  const vRef = useRef(v);
+  const lastSavedRef = useRef(entry?.memo || "");
+  const timerRef = useRef(null);
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+
+  const flush = (sync) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    const text = vRef.current;
+    if (text === lastSavedRef.current) return;
+    lastSavedRef.current = text;
+    if (sync) flushSync(() => onSaveRef.current(text));
+    else onSaveRef.current(text);
+    setSaved(true);
+  };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
+  // external changes (another view, import, sync) — but never clobber our own
+  // in-flight text: a save we just made echoes back here as entry.memo
+  useEffect(() => {
+    const incoming = entry?.memo || "";
+    if (incoming === lastSavedRef.current) return;
+    lastSavedRef.current = incoming;
+    vRef.current = incoming;
+    setV(incoming);
+  }, [entry?.id, entry?.memo]);
+
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === "hidden") flushRef.current(true); };
+    const onPageHide = () => flushRef.current(true);
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onPageHide);
+      flushRef.current(false); // closing the modal / leaving the view
+    };
+  }, []);
+
   if (!entry) return null;
   return (
-    <textarea
-      className="memo"
-      rows={2}
-      placeholder="メモ・感想…"
-      value={v}
-      onChange={(e) => setV(e.target.value)}
-      onBlur={() => { if (v !== (entry.memo || "")) onSave(v); }}
-    />
+    <div className="memo-wrap">
+      <textarea
+        className="memo"
+        rows={2}
+        placeholder="メモ・感想…"
+        aria-label="メモ・感想"
+        value={v}
+        onChange={(e) => {
+          vRef.current = e.target.value;
+          setV(e.target.value);
+          setSaved(false);
+          clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => flushRef.current(false), MEMO_DEBOUNCE_MS);
+        }}
+        onBlur={() => flush(false)}
+      />
+      <span className="memo-status" aria-live="polite">{saved ? "保存済み" : ""}</span>
+    </div>
   );
 }
 

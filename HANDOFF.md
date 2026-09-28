@@ -314,7 +314,7 @@ The user is **explicitly open to token-based login** for this. Full spec:
 
 1. `TmdbSection`'s first render for an unmatched show does search → `onMap` → early-return, relying on the prop change to re-trigger the effect for the detail fetch. It works but is subtle — refactor candidate (single async flow), keep the "match once, cache forever" behavior.
 2. Seiyuu role lists show one row per character-media edge; long-running franchises repeat across seasons. Intentional (it shows the actual role history) but could gain optional grouping.
-3. `MemoBox` saves on blur only — a hard page close with focus still in the textarea loses the in-flight memo. Debounced autosave is a nice-to-have.
+3. ~~`MemoBox` saves on blur only~~ — **resolved 2026-09**: debounced autosave (800 ms) + flush on blur, unmount, `visibilitychange`→hidden and `pagehide` (via `flushSync`, so the localStorage write lands before iOS freezes the page).
 4. Ledger entries snapshot title/cover at save time and never refresh from AniList (feature: stability; bug: stale covers if AniList changes URLs). A lazy refresh on detail-open would fix it.
 5. In-browser babel-standalone in the HTML build means a visible compile pause on slow devices — acceptable for the fallback artifact, irrelevant post-Vite.
 6. `search` view ignores format/genre filters by design (only the R18 filter applies) — revisit only with UI that makes active-filter state obvious.

@@ -197,8 +197,9 @@ export default function App() {
   const mutate = (media, fn) => {
     setEntries((prev) => {
       const cur = prev[media.id];
-      const next = { ...prev };
       const updated = fn(cur);
+      if (updated === undefined) return prev; // setter declined (e.g. late memo flush after removal)
+      const next = { ...prev };
       if (updated === null) delete next[media.id];
       else {
         next[media.id] = {
@@ -231,7 +232,8 @@ export default function App() {
 
   const setRating = (media) => (rating) => mutate(media, () => ({ rating }));
   const setDate = (media) => (completedDate) => mutate(media, () => ({ completedDate }));
-  const setMemo = (media) => (memo) => mutate(media, () => ({ memo }));
+  // a memo never creates an entry — only annotates an existing one
+  const setMemo = (media) => (memo) => mutate(media, (cur) => (cur ? { memo } : undefined));
   const setProgress = (media) => (progress) => mutate(media, () => ({ progress }));
   const setRewatch = (media) => (rewatchCount) => mutate(media, () => ({ rewatchCount }));
 

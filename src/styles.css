@@ -180,6 +180,12 @@
   border: 1px solid var(--line); border-radius: 6px; resize: vertical;
 }
 .memo:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.memo-wrap { position: relative; }
+.memo-wrap .memo { display: block; }
+.memo-status {
+  position: absolute; right: 8px; bottom: 6px; font-size: 10.5px; color: var(--ink-soft);
+  pointer-events: none;
+}
 
 /* stars */
 .stars { display: inline-flex; align-items: center; gap: 1px; }
