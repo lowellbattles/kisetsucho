@@ -1,7 +1,7 @@
 # 季節帳 (Kisetsuchō) — Seasonal Anime Ledger
 ## Developer Handoff Document (v4 → Claude Code)
 
-**Last updated:** 2026-07-27
+**Last updated:** 2026-09-28 (P3 complete — see §10)
 **Handoff from:** Claude (claude.ai chat, iterative prototyping)
 **Handoff to:** Claude Code (repo-based development)
 **Companion files:** `CLAUDE.md` (session instructions), `scripts/build_html.py` (standalone build), `main.jsx` (Vite entry with storage shim), `kisetsucho.jsx` (the entire v4 application)
@@ -108,7 +108,7 @@ npm run dev   # http://localhost:5173
 
 **Stack:** React 18, functional components + hooks only, no router (view state machine in `App`), no external state library, no CSS framework — a single CSS template string (`const CSS`) injected via `<style>`, driven by CSS custom properties.
 
-**View state machine:** `view ∈ {browse, search, list, stats}` + `scope ∈ {season, year, decade}` (browse only). Modals are independent overlays: `detailId`, `seiyuuId`, `settingsOpen`. Seiyuu modal stacks above detail modal (z-index 60 vs 50); opening a work from the seiyuu modal closes it and swaps `detailId`.
+**View state machine:** `view ∈ {browse, search, list, calendar, stats}` + `scope ∈ {season, year, decade}` (browse only). Modals are independent overlays: `detailId`, `seiyuuId`, `settingsOpen`, `syncOpen` — all rendered through `components/Modal.jsx` (focus trap, Escape closes the topmost only, focus returns to the opener). Seiyuu modal stacks above detail modal (z-index 60 vs 50); opening a work from the seiyuu modal closes it and swaps `detailId`.
 
 **Component tree (all in App.jsx):**
 ```
@@ -302,14 +302,15 @@ The user is **explicitly open to token-based login** for this. Full spec:
 - Add PWA manifest + icons so it installs to the iPhone home screen; consider a service worker for shell caching (data stays live).
 - Storage on iPhone Safari: localStorage persists per-origin but iOS can evict storage for rarely-used sites — surface a gentle periodic "エクスポートでバックアップ" reminder, and note this is another argument for Annict-as-backend.
 
-### P3 — Refinements (unordered)
-- Per-cour TMDB precision: match to TMDB *seasons* (`/tv/{id}/season/{n}?language=ja-JP`) for cour-specific JA synopses.
-- Kana-aware ledger title sort using Annict `titleKana`.
-- 保留 (on hold) fifth status (maps to Annict ON_HOLD) — requires export version bump + migration.
-- Watched-episode auto-suggest: when progress hits episode count, offer 視聴済 promotion.
-- Stats: monthly pace chart, longest streaks, top studios/genres.
-- Syoboi Calendar (しょぼいカレンダー) via Annict's `syobocalTid` for airing-calendar view.
-- A11y pass: focus trap in modals, Escape-to-close, aria-live for async sections.
+### P3 — Refinements — ✅ done 2026-09 (branch `p3-buildout`)
+- ✅ Per-cour TMDB precision — `tmdbDetails` picks the TMDB season by air date (latest regular season started by the AniList start date + 21 d); the per-season JA overview already comes with `/tv/{id}?language=ja-JP`, so no extra request. tmdbmap gains `season` (see §5); season chips in 照合を修正. Many anime sit in one long TMDB "Season 1" — those correctly keep the series overview.
+- ✅ Kana-aware ledger タイトル順 — `src/kana.js`; readings snapshot as `titleKana` from the detail modal, sync, or the ledger's 読みがなを取得 button. 五十音 group headers appear only once a reading exists (no-token ledger unchanged).
+- ✅ 保留 fifth status ↔ Annict ON_HOLD — export **v5** + migration (`src/ledger.js`, `check:ledger`).
+- ✅ Watched-episode auto-suggest — inline 「全n話を視聴しました。視聴済にする」 (suggestion only).
+- ✅ Stats — 月別ペース (24 months), 連続記録 (month streaks), top studios/genres (from the v5 snapshot fields).
+- ✅ Airing calendar — new 放送 view. **Syoboi Calendar is not callable from the browser** (`cal.syoboi.jp` sends no CORS headers — probed 2026-09-28), so the calendar is AniList `airingSchedule` (no key) + Annict channel names when a token is set, with per-work しょぼいカレンダー links via `syobocalTid`. Fetching Syoboi directly would need the serverless proxy described under P1.
+- ✅ A11y pass — shared `Modal.jsx` (focus trap, Escape, focus return), aria-live on async status lines.
+- ✅ Also fixed along the way: §11 #3 (memo autosave) and #4 (snapshot refresh).
 
 ---
 
