@@ -90,6 +90,7 @@ function buildSyncPlan({ entries, annictMap, library }) {
       workId: row.workId,
       malAnimeId: row.malAnimeId,
       title: row.title,
+      titleKana: row.titleKana || "",
       state: row.state,
     });
   }

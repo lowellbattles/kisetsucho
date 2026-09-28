@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { STATUSES } from "../constants.js";
-import { findAnnictWork, resolveWorkIds, fetchLibrary, pushStatus } from "../api/annict.js";
-import { fetchMediaByIds, fetchMediaByMalIds } from "../api/anilist.js";
+import { fetchWorkMeta, resolveAnnictMapGaps, fetchLibrary, pushStatus } from "../api/annict.js";
+import { fetchMediaByMalIds } from "../api/anilist.js";
 import { snapshotFields } from "../utils.js";
 import { buildSyncPlan, STATUS_TO_ANNICT, ANNICT_TO_STATUS } from "../sync.js";
 
@@ -49,7 +49,7 @@ function SyncSection({ label, hint, count, defaultOpen, children }) {
   );
 }
 
-function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onClose }) {
+function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, onClose }) {
   const [phase, setPhase] = useState("prepare"); // prepare | preview | running | done | error
   const [progress, setProgress] = useState(null); // { label, n, total } — null total = indeterminate
   const [plan, setPlan] = useState(null);
@@ -73,41 +73,25 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onClose }) {
     (async () => {
       try {
         const local = Object.values(entries);
-        const resolved = { ...annictMap }; // local copy — onMap state updates land async
+        const resolved = await resolveAnnictMapGaps(local, annictMap, token, {
+          onMap, onProgress: setProgress, isLive: () => live,
+        });
+        if (!resolved) return;
 
-        const missing = local.filter((e) => resolved[e.id] === undefined);
-        if (missing.length) {
-          setProgress({ label: "照合中", n: 0, total: missing.length });
-          // ledger entries don't snapshot idMal — fetch light AniList stubs first
-          const stubs = await fetchMediaByIds(missing.map((e) => e.id));
-          for (let i = 0; i < missing.length; i++) {
-            if (!live) return;
-            const e = missing[i];
-            const media = stubs.get(e.id);
-            let m = { none: true };
-            if (media) {
-              if (i > 0) await sleep(300);
-              const found = await findAnnictWork(media, token);
-              if (found) m = found;
-            }
-            resolved[e.id] = m;
-            onMap(e.id, m); // match once, cache (misses too) — same contract as tmdbmap
-            setProgress({ label: "照合中", n: i + 1, total: missing.length });
-          }
-        }
-
-        // old annictmap entries ({annictId} without the relay global id) → bulk backfill
+        // old annictmap entries ({annictId} without the relay global id) → bulk
+        // backfill; the same request brings titleKana for the ledger kana sort
         const stale = local.filter((e) => resolved[e.id]?.annictId && !resolved[e.id].id);
         if (stale.length) {
           setProgress({ label: "作品IDを解決中", n: null, total: null });
-          const gids = await resolveWorkIds(
+          const meta = await fetchWorkMeta(
             [...new Set(stale.map((e) => resolved[e.id].annictId))], token);
           for (const e of stale) {
-            const gid = gids.get(resolved[e.id].annictId);
-            if (!gid) continue;
-            const m = { annictId: resolved[e.id].annictId, id: gid };
+            const w = meta.get(resolved[e.id].annictId);
+            if (!w) continue;
+            const m = { annictId: resolved[e.id].annictId, id: w.id };
             resolved[e.id] = m;
             onMap(e.id, m);
+            if (w.titleKana && !e.titleKana) onSnapshot?.(e.id, { titleKana: w.titleKana });
           }
         }
 
@@ -193,6 +177,7 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onClose }) {
                   id: media.id,
                   status: ANNICT_TO_STATUS[r.state],
                   ...snapshotFields(media),
+                  ...(r.titleKana ? { titleKana: r.titleKana } : {}),
                   updatedAt: Date.now(),
                 }
           );

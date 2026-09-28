@@ -3,6 +3,7 @@
    imports cleanly" — for every export version the app has shipped.
    Usage: node scripts/check-ledger.mjs */
 import { EXPORT_VERSION, buildExport, migrateImport } from "../src/ledger.js";
+import { toHiragana, kanaSortInfo, compareKana } from "../src/kana.js";
 
 let bad = 0;
 let total = 0;
@@ -69,5 +70,20 @@ check("malformed entries skipped, not merged", Object.keys(junk.entries).length 
 check("non-object input rejected", throws(() => migrateImport(null)) && throws(() => migrateImport([1, 2])));
 check("wrapped file without entries rejected", throws(() => migrateImport({ app: "kisetsucho", version: 5 })));
 
-console.log(`ledger: ${total - bad}/${total} migration checks OK`);
+/* kana-aware タイトル順 (src/kana.js) */
+const t = (native, titleKana) => ({ title: { native }, ...(titleKana !== undefined ? { titleKana } : {}) });
+check("toHiragana normalizes katakana", toHiragana("カタカナ・ヴ") === "かたかな・ゔ");
+check("row from Annict reading", kanaSortInfo(t("進撃の巨人", "しんげきのきょじん")).row === "さ行");
+check("voiced kana share their row", kanaSortInfo(t("ガンダム")).row === "か行");
+check("kana-leading native needs no reading", kanaSortInfo(t("やがて君になる")).row === "や行");
+check("kanji without reading → 読み未取得", kanaSortInfo(t("葬送のフリーレン")).row === "読み未取得");
+check("latin-leading → 英数字・記号", kanaSortInfo(t("SPY×FAMILY")).row === "英数字・記号");
+const sorted = [
+  t("葬送のフリーレン"), t("SPY×FAMILY"), t("進撃の巨人", "しんげきのきょじん"),
+  t("ガンダム"), t("青の祓魔師", "あおのえくそしすと"),
+].sort(compareKana).map((e) => e.title.native).join(",");
+check("五十音 rows, then 英数字, then unread",
+  sorted === "青の祓魔師,ガンダム,進撃の巨人,SPY×FAMILY,葬送のフリーレン");
+
+console.log(`ledger: ${total - bad}/${total} migration + kana checks OK`);
 if (bad) process.exit(1);

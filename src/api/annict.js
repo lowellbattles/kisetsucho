@@ -7,6 +7,8 @@
    kisetsucho:annictmap as {annictId, id} (id = relay global Work.id, needed by
    the updateStatus mutation; old cache entries may lack it — callers tolerate). */
 
+import { fetchMediaByIds } from "./anilist.js";
+
 const ANNICT_API = "https://api.annict.com/graphql";
 
 async function annictGql(query, variables, token) {
@@ -71,6 +73,8 @@ query ($annictIds: [Int!]) {
     nodes {
       id
       annictId
+      titleKana
+      syobocalTid
       satisfactionRate
       watchersCount
       programs(first: 50) {
@@ -125,6 +129,8 @@ async function annictWorkDetails(annictId, token) {
     annictId: w.annictId,
     satisfactionRate: w.satisfactionRate,
     watchersCount: w.watchersCount,
+    titleKana: w.titleKana || "",
+    syobocalTid: w.syobocalTid ?? null,
     programs: w.programs?.nodes || [],
     staffs: (w.staffs?.nodes || []).slice().sort((a, b) => a.sortNumber - b.sortNumber),
     url: `https://annict.com/works/${w.annictId}`,
@@ -139,7 +145,7 @@ query ($states: [StatusState!], $first: Int, $after: String) {
     libraryEntries(states: $states, first: $first, after: $after) {
       pageInfo { hasNextPage endCursor }
       nodes {
-        work { id annictId malAnimeId title }
+        work { id annictId malAnimeId title titleKana }
         status { state createdAt }
       }
     }
@@ -165,6 +171,7 @@ async function fetchLibrary(token) {
         annictId: n.work.annictId,
         malAnimeId: n.work.malAnimeId ?? null,
         title: n.work.title,
+        titleKana: n.work.titleKana || "",
         state: n.status.state,
         stateChangedAt: n.status.createdAt,
       });
@@ -175,22 +182,53 @@ async function fetchLibrary(token) {
   return rows;
 }
 
-const WORK_IDS_QUERY = `
+const WORK_META_QUERY = `
 query ($ids: [Int!]) {
   searchWorks(annictIds: $ids, first: 50) {
-    nodes { annictId id }
+    nodes { annictId id titleKana syobocalTid }
   }
 }`;
 
-/* Backfill relay global Work.ids for old annictmap entries ({annictId} only).
-   Chunked ×50; returns Map annictId → global id. */
-async function resolveWorkIds(annictIds, token) {
+/* Bulk work metadata by annictId, chunked ×50: relay global Work.id (backfill
+   for old {annictId}-only annictmap entries), titleKana (ledger kana sort),
+   syobocalTid (しょぼいカレンダー links). Returns Map annictId → meta. */
+async function fetchWorkMeta(annictIds, token) {
   const map = new Map();
   for (let i = 0; i < annictIds.length; i += 50) {
-    const d = await annictGql(WORK_IDS_QUERY, { ids: annictIds.slice(i, i + 50) }, token);
-    for (const n of d.searchWorks?.nodes || []) map.set(n.annictId, n.id);
+    const d = await annictGql(WORK_META_QUERY, { ids: annictIds.slice(i, i + 50) }, token);
+    for (const n of d.searchWorks?.nodes || [])
+      map.set(n.annictId, { id: n.id, titleKana: n.titleKana || "", syobocalTid: n.syobocalTid ?? null });
   }
   return map;
+}
+
+/* Resolve annictmap gaps for a list of ledger entries (sync 準備中 + the
+   ledger's 読みがなを取得). Ledger entries don't snapshot idMal, so light
+   AniList stubs are fetched first; then one findAnnictWork per entry with
+   300 ms spacing. Every result — misses too — is cached through onMap
+   (match once, same contract as tmdbmap). Returns the resolved map, or null
+   if isLive() turned false mid-run. */
+async function resolveAnnictMapGaps(list, annictMap, token, { onMap, onProgress, isLive = () => true }) {
+  const resolved = { ...annictMap }; // local copy — onMap state updates land async
+  const missing = list.filter((e) => resolved[e.id] === undefined);
+  if (!missing.length) return resolved;
+  onProgress?.({ label: "照合中", n: 0, total: missing.length });
+  const stubs = await fetchMediaByIds(missing.map((e) => e.id));
+  for (let i = 0; i < missing.length; i++) {
+    if (!isLive()) return null;
+    const e = missing[i];
+    const media = stubs.get(e.id);
+    let m = { none: true };
+    if (media) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 300));
+      const found = await findAnnictWork(media, token);
+      if (found) m = found;
+    }
+    resolved[e.id] = m;
+    onMap(e.id, m);
+    onProgress?.({ label: "照合中", n: i + 1, total: missing.length });
+  }
+  return resolved;
 }
 
 const UPDATE_STATUS_MUTATION = `
@@ -217,5 +255,5 @@ async function pushStatus(workId, state, token) {
 
 export {
   annictGql, toAnnictSeason, findAnnictWork, annictWorkDetails,
-  fetchLibrary, resolveWorkIds, pushStatus,
+  fetchLibrary, fetchWorkMeta, resolveAnnictMapGaps, pushStatus,
 };

@@ -19,6 +19,8 @@ import {
   storageGetJson, storageSetJson,
 } from "./storage.js";
 import { buildExport, migrateImport } from "./ledger.js";
+import { compareKana, kanaSortInfo } from "./kana.js";
+import { resolveAnnictMapGaps, fetchWorkMeta } from "./api/annict.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./components/controls.jsx";
 import AnimeCard from "./components/AnimeCard.jsx";
 import DetailModal from "./components/DetailModal.jsx";
@@ -65,6 +67,7 @@ export default function App() {
   const [syncOpen, setSyncOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
   const [annictMap, setAnnictMap] = useState({});
+  const [kanaJob, setKanaJob] = useState(null); // { label, n, total } while 読みがなを取得 runs
 
   const seasonMeta = SEASONS.find((s) => s.key === season);
   const scopeMeta = SCOPE_TABS.find((s) => s.key === scope);
@@ -310,6 +313,44 @@ export default function App() {
     setDetailId(pick.id);
   };
 
+  /* 読みがなを取得 — fill Annict titleKana for ledger entries that lack it
+     (kana-aware タイトル順). Same resolver as the sync's 準備中 phase:
+     match once via annictmap, then one bulk meta read (×50). Kana lands via
+     refreshSnapshot, so updatedAt is untouched. */
+  const kanaTargets = useMemo(
+    () => Object.values(entries).filter((e) => e.titleKana === undefined && !annictMap[e.id]?.none),
+    [entries, annictMap]);
+  const fillKana = async () => {
+    if (kanaJob || !settings.annictToken) return;
+    const token = settings.annictToken;
+    const list = kanaTargets;
+    setIoMsg(null);
+    try {
+      setKanaJob({ label: "照合中", n: 0, total: list.length });
+      const resolved = await resolveAnnictMapGaps(list, annictMap, token, {
+        onMap: updateAnnictMap, onProgress: setKanaJob,
+      });
+      const ids = [...new Set(list.map((e) => resolved[e.id]?.annictId).filter(Boolean))];
+      setKanaJob({ label: "読みがなを取得中", n: null, total: null });
+      const meta = await fetchWorkMeta(ids, token);
+      let got = 0;
+      for (const e of list) {
+        const ref = resolved[e.id];
+        const w = ref?.annictId ? meta.get(ref.annictId) : null;
+        if (!w) continue;
+        if (!ref.id && w.id) updateAnnictMap(e.id, { annictId: ref.annictId, id: w.id });
+        refreshSnapshot(e.id, { titleKana: w.titleKana }); // "" = Annict has no reading; don't retry
+        if (w.titleKana) got++;
+      }
+      const miss = list.length - got;
+      setIoMsg(`読みがなを${got}件取得しました` + (miss ? `（${miss}件はAnnictに読みがなが見つかりませんでした）` : ""));
+    } catch (err) {
+      setIoMsg(`読みがなの取得に失敗しました：${err.message}`);
+    } finally {
+      setKanaJob(null);
+    }
+  };
+
   /* derived */
   const decadeYears = useMemo(() => {
     const ys = [];
@@ -324,8 +365,14 @@ export default function App() {
     return ds;
   }, []);
 
+  const tabEntries = useMemo(
+    () => Object.values(entries).filter((e) => e.status === listTab), [entries, listTab]);
+  // kana ordering + 五十音 headers only once some reading exists, so the
+  // no-token ledger keeps its plain native-title order
+  const kanaMode = useMemo(() => tabEntries.some((e) => e.titleKana), [tabEntries]);
+
   const listEntries = useMemo(() => {
-    const arr = Object.values(entries).filter((e) => e.status === listTab);
+    const arr = [...tabEntries];
     const bySeason = (a, b) =>
       (b.seasonYear || 0) - (a.seasonYear || 0) ||
       (SEASON_ORDER[b.season] ?? -1) - (SEASON_ORDER[a.season] ?? -1);
@@ -335,12 +382,14 @@ export default function App() {
       season: bySeason,
       season_asc: (a, b) => -bySeason(a, b),
       rating: (a, b) => (b.rating || 0) - (a.rating || 0),
-      title: (a, b) =>
-        (a.title?.native || a.title?.romaji || "").localeCompare(
-          b.title?.native || b.title?.romaji || "", "ja"),
+      title: kanaMode
+        ? compareKana
+        : (a, b) =>
+            (a.title?.native || a.title?.romaji || "").localeCompare(
+              b.title?.native || b.title?.romaji || "", "ja"),
     };
     return arr.sort(sorters[ledgerSort] || sorters.date);
-  }, [entries, listTab, ledgerSort]);
+  }, [tabEntries, ledgerSort, kanaMode]);
 
   const groupedEntries = useMemo(() => {
     const keyFns = {
@@ -352,7 +401,7 @@ export default function App() {
       season: (e) => (e.seasonYear ? seasonJa(e.season, e.seasonYear) : "シーズン不明"),
       season_asc: (e) => (e.seasonYear ? seasonJa(e.season, e.seasonYear) : "シーズン不明"),
       rating: (e) => (e.rating ? `★ ${e.rating.toFixed(1)}` : "未評価"),
-      title: null,
+      title: kanaMode ? (e) => kanaSortInfo(e).row : null,
     };
     const keyFn = keyFns[ledgerSort];
     if (!keyFn) return [{ header: null, items: listEntries }];
@@ -364,7 +413,7 @@ export default function App() {
       groups[groups.length - 1].items.push(e);
     }
     return groups;
-  }, [listEntries, ledgerSort]);
+  }, [listEntries, ledgerSort, kanaMode]);
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.key, 0]));
@@ -640,6 +689,14 @@ export default function App() {
               {listTab === "want" && counts.want > 0 && (
                 <button className="toolbar-btn" onClick={randomPick}>ランダムに選ぶ</button>
               )}
+              {settings.annictToken && ledgerSort === "title" && kanaTargets.length > 0 && (
+                <button className="toolbar-btn subtle" onClick={fillKana} disabled={!!kanaJob}
+                  title="Annictの読みがなで五十音順に並べます">
+                  {kanaJob
+                    ? `${kanaJob.label}…${kanaJob.total ? ` ${kanaJob.n} / ${kanaJob.total}` : ""}`
+                    : `読みがなを取得（Annict・${kanaTargets.length}件）`}
+                </button>
+              )}
               {settings.annictToken && (
                 <button className="toolbar-btn" onClick={() => setSyncOpen(true)}>Annictと同期</button>
               )}
@@ -654,7 +711,7 @@ export default function App() {
               />
             </div>
           </div>
-          {ioMsg && <p className="io-msg">{ioMsg}</p>}
+          {ioMsg && <p className="io-msg" aria-live="polite">{ioMsg}</p>}
           {listTab === "watched" && watchedStats.total > 0 && (
             <p className="stats-line">
               視聴済 {watchedStats.total}作品
@@ -762,6 +819,7 @@ export default function App() {
           annictMap={annictMap}
           token={settings.annictToken}
           onMap={updateAnnictMap}
+          onSnapshot={refreshSnapshot}
           onApplyPull={(list) =>
             setEntries((prev) => {
               const next = { ...prev };

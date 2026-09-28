@@ -29,7 +29,7 @@ function groupByChannel(programs) {
   return [...byChannel.values()].sort((a, b) => b.t - a.t).slice(0, 6);
 }
 
-function AnnictSection({ media, token, mapEntry, onMap }) {
+function AnnictSection({ media, token, mapEntry, onMap, onSnapshot }) {
   const [state, setState] = useState({ loading: false });
   const [showAllStaff, setShowAllStaff] = useState(false);
 
@@ -52,6 +52,8 @@ function AnnictSection({ media, token, mapEntry, onMap }) {
         if (m.none) { if (live) setState({ none: true }); return; }
         const info = await annictWorkDetails(m.annictId, token);
         if (live) setState(info ? { info } : { none: true });
+        // reading for the kana-aware ledger sort ("" = none; no-op if untracked)
+        if (info) onSnapshot?.(media.id, { titleKana: info.titleKana });
       } catch (e) {
         if (live) setState({ error: e.message });
       }
@@ -120,6 +122,10 @@ function AnnictSection({ media, token, mapEntry, onMap }) {
           )}
           <p className="fine">
             データ提供：<a href={info.url} target="_blank" rel="noreferrer">Annict</a>
+            {info.syobocalTid && (
+              <> ・ <a href={`https://cal.syoboi.jp/tid/${info.syobocalTid}`} target="_blank" rel="noreferrer">
+                しょぼいカレンダー ↗</a></>
+            )}
           </p>
         </>
       )}

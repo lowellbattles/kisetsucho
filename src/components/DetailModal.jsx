@@ -110,6 +110,7 @@ function DetailModal({
               token={annictToken}
               mapEntry={annictMap[data.id]}
               onMap={onAnnictMap}
+              onSnapshot={onSnapshot}
             />
 
             {data.characters?.edges?.length > 0 && (
