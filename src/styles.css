@@ -271,6 +271,16 @@
 .bar-fill { display: block; height: 100%; background: var(--accent); opacity: 0.75; }
 .bar-val { flex: none; width: 54px; font-size: 12px; color: var(--ink-soft); }
 .season-stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pace-chart {
+  display: flex; align-items: stretch; gap: 3px; height: 140px;
+  padding: 8px 6px 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+}
+.pace-col { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.pace-n { font-size: 10px; color: var(--ink-soft); line-height: 1.4; }
+.pace-bar { width: 100%; max-width: 22px; background: var(--accent); opacity: 0.75; border-radius: 3px 3px 0 0; }
+.pace-m { height: 18px; font-size: 9.5px; color: var(--ink-soft); white-space: nowrap; line-height: 18px; }
+.stat-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 28px; }
+.stat-sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
 .season-stat {
   flex: 1; min-width: 100px; max-width: 160px; background: var(--tab-soft);
   border: 1px solid var(--line); border-radius: 10px; padding: 12px;

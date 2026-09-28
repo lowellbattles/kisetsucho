@@ -1,5 +1,36 @@
 import { useMemo } from "react";
-import { SEASONS, STATUSES, FORMAT_JA } from "../constants.js";
+import { SEASONS, STATUSES, FORMAT_JA, GENRES } from "../constants.js";
+
+const GENRE_JA = Object.fromEntries(GENRES.map((g) => [g.key, g.ja]));
+const PACE_MONTHS = 24;
+const TOP_N = 8;
+
+/* month index helpers — "YYYY-MM" ↔ y*12 + (m-1) */
+const monthIdx = (ym) => parseInt(ym.slice(0, 4), 10) * 12 + parseInt(ym.slice(5, 7), 10) - 1;
+const idxLabel = (i) => `${Math.floor(i / 12)}年${(i % 12) + 1}月`;
+
+/* Longest run of consecutive months with ≥1 completion, plus the current
+   run (ending this month, or last month if nothing is logged yet this month). */
+function monthStreaks(monthSet, nowIdx) {
+  const months = [...monthSet].sort((a, b) => a - b);
+  let best = { len: 0, from: null, to: null };
+  let runStart = null;
+  for (let i = 0; i < months.length; i++) {
+    if (i === 0 || months[i] !== months[i - 1] + 1) runStart = months[i];
+    const len = months[i] - runStart + 1;
+    if (len > best.len) best = { len, from: runStart, to: months[i] };
+  }
+  let end = monthSet.has(nowIdx) ? nowIdx : monthSet.has(nowIdx - 1) ? nowIdx - 1 : null;
+  let current = 0;
+  while (end !== null && monthSet.has(end - current)) current++;
+  return { best, current };
+}
+
+function topCounts(list, keyOf) {
+  const c = {};
+  for (const e of list) for (const k of keyOf(e) || []) c[k] = (c[k] || 0) + 1;
+  return Object.entries(c).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, TOP_N);
+}
 
 /* ---------- stats view ---------- */
 
@@ -42,7 +73,31 @@ function StatsView({ entries }) {
       }
     });
 
-    return { all, watched, rated, avg, rewatches, byAirYear, byCompYear, byFormat, ratingDist, bySeason };
+    /* monthly pace + streaks (completion month of 視聴済) */
+    const now = new Date();
+    const nowIdx = now.getFullYear() * 12 + now.getMonth();
+    const byMonth = {};
+    watched.forEach((e) => {
+      if (!/^\d{4}-\d{2}/.test(e.completedDate || "")) return;
+      const i = monthIdx(e.completedDate);
+      byMonth[i] = (byMonth[i] || 0) + 1;
+    });
+    const pace = [];
+    for (let i = nowIdx - PACE_MONTHS + 1; i <= nowIdx; i++) pace.push({ i, n: byMonth[i] || 0 });
+    const thisYear = pace.filter((p) => Math.floor(p.i / 12) === now.getFullYear()).reduce((s, p) => s + p.n, 0);
+    const last12 = pace.slice(-12).reduce((s, p) => s + p.n, 0);
+    const streaks = monthStreaks(new Set(Object.keys(byMonth).map(Number)), nowIdx);
+
+    /* top studios / genres — snapshot fields, backfilled on detail open */
+    const topStudios = topCounts(watched, (e) => e.studios);
+    const topGenres = topCounts(watched, (e) => e.genres);
+    const missingMeta = watched.filter((e) => !e.studios && !e.genres).length;
+
+    return {
+      all, watched, rated, avg, rewatches, byAirYear, byCompYear, byFormat, ratingDist, bySeason,
+      pace, thisYear, last12, streaks, hasPace: Object.keys(byMonth).length > 0,
+      topStudios, topGenres, missingMeta,
+    };
   }, [entries]);
 
   const counts = useMemo(() => {
@@ -58,6 +113,7 @@ function StatsView({ entries }) {
   const maxFmt = Math.max(0, ...Object.values(stats.byFormat));
   const ratingKeys = ["0.5","1.0","1.5","2.0","2.5","3.0","3.5","4.0","4.5","5.0"];
   const maxDist = Math.max(0, ...ratingKeys.map((k) => stats.ratingDist[k] || 0));
+  const maxPace = Math.max(0, ...stats.pace.map((p) => p.n));
 
   if (stats.all.length === 0) {
     return (
@@ -90,6 +146,76 @@ function StatsView({ entries }) {
           </div>
         </div>
       </section>
+
+      {stats.hasPace && (
+        <section className="stat-section">
+          <h3 className="group-header">月別ペース <span className="group-count">Monthly pace — last {PACE_MONTHS} months</span></h3>
+          <p className="stats-line">
+            今年 {stats.thisYear}本 ・ 過去12か月 平均 {(stats.last12 / 12).toFixed(1)}本/月
+          </p>
+          <div className="pace-chart" role="img"
+            aria-label={`月別の視聴済数、直近${PACE_MONTHS}か月`}>
+            {stats.pace.map((p) => {
+              const m = (p.i % 12) + 1;
+              return (
+                <div key={p.i} className="pace-col" title={`${idxLabel(p.i)}：${p.n}本`}>
+                  <span className="pace-n">{p.n || ""}</span>
+                  <span className="pace-bar" style={{ height: `${maxPace ? (p.n / maxPace) * 100 : 0}%` }} />
+                  <span className="pace-m">{m === 1 ? `${Math.floor(p.i / 12) % 100}年` : m % 3 === 1 ? `${m}月` : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {stats.hasPace && (
+        <section className="stat-section">
+          <h3 className="group-header">連続記録 <span className="group-count">Streaks — consecutive months with a completion</span></h3>
+          <div className="stat-cards">
+            <div className="stat-card">
+              <span className="stat-num">{stats.streaks.best.len}か月</span>
+              <span className="stat-label">
+                最長連続{stats.streaks.best.len > 0 &&
+                  `（${idxLabel(stats.streaks.best.from)}〜${idxLabel(stats.streaks.best.to)}）`}
+              </span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-num">{stats.streaks.current}か月</span>
+              <span className="stat-label">現在の連続記録</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {(stats.topStudios.length > 0 || stats.topGenres.length > 0) && (
+        <section className="stat-section">
+          <h3 className="group-header">よく見るスタジオ・ジャンル <span className="group-count">Top studios &amp; genres</span></h3>
+          <div className="stat-split">
+            {stats.topStudios.length > 0 && (
+              <div>
+                <p className="stat-sub">制作スタジオ</p>
+                {stats.topStudios.map(([k, n]) => (
+                  <BarRow key={k} label={k} value={n} max={stats.topStudios[0][1]} suffix="本" />
+                ))}
+              </div>
+            )}
+            {stats.topGenres.length > 0 && (
+              <div>
+                <p className="stat-sub">ジャンル</p>
+                {stats.topGenres.map(([k, n]) => (
+                  <BarRow key={k} label={GENRE_JA[k] || k} value={n} max={stats.topGenres[0][1]} suffix="本" />
+                ))}
+              </div>
+            )}
+          </div>
+          {stats.missingMeta > 0 && (
+            <p className="fine">
+              {stats.missingMeta}件はスタジオ・ジャンル情報が未取得です（作品の詳細を開くと補完されます）。
+            </p>
+          )}
+        </section>
+      )}
 
       {airYears.length > 0 && (
         <section className="stat-section">
