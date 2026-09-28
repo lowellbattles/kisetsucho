@@ -10,7 +10,8 @@
     "check:queries": "node scripts/check-queries.mjs",
     "check:sync": "node scripts/check-sync.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:ledger": "node scripts/check-ledger.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

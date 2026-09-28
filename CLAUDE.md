@@ -10,12 +10,13 @@ npm run dev                # Vite dev server → http://localhost:6173 (fixed po
 npm run build              # production build (must pass before commit)
 npm run check:queries      # §9.2 query-builder brace balance (all 26 combinations)
 npm run check:sync         # sync-plan fixture checks (src/sync.js diff logic)
+npm run check:ledger       # export/import migration fixture checks (src/ledger.js) — v4 + v5 files
 npm run build:standalone   # regenerate standalone dist-standalone/kisetsucho.html (keyless by design)
 ```
 
 ## Architecture in one paragraph
 
-React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is the orchestrator: no router — `view` state machine (browse/search/list/stats) + modal overlays (detail, seiyuu, settings), all entry mutations through one `mutate()` helper. Around it: `src/api/anilist.js` (gql + dynamic query builders + `PER_PAGE`/`MAX_AUTO_PAGES` rate-limit constants), `src/api/tmdb.js` (matcher + details), `src/api/annict.js` (bearer-auth gql + idMal join + work details + library read/status write), `src/sync.js` (pure sync-plan diff logic, fixture-checked), `src/constants.js` (JA label maps), `src/utils.js`, `src/storage.js` (keys + JSON helpers), `src/env.js` (TMDB key default from `.env.local`, read lazily — see its comment), `src/components/` (controls, AnimeCard, TmdbSection, DetailModal, SeiyuuModal, SettingsModal, StatsView), `src/styles.css`. Data: AniList GraphQL (no auth; browsing/search/detail/cast/relations) + TMDB REST (key; Japanese synopses + JP streaming providers via JustWatch data). Persistence: `window.storage` abstraction (shimmed to localStorage in `src/main.jsx`) under `kisetsucho:*` keys; ledger schema and export format in HANDOFF §5. The standalone build is `scripts/build_standalone.mjs` (real Vite build inlined into one HTML file; replaced the retired chat-era `build_html.py`).
+React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is the orchestrator: no router — `view` state machine (browse/search/list/stats) + modal overlays (detail, seiyuu, settings), all entry mutations through one `mutate()` helper. Around it: `src/api/anilist.js` (gql + dynamic query builders + `PER_PAGE`/`MAX_AUTO_PAGES` rate-limit constants), `src/api/tmdb.js` (matcher + details), `src/api/annict.js` (bearer-auth gql + idMal join + work details + library read/status write), `src/sync.js` (pure sync-plan diff logic, fixture-checked), `src/ledger.js` (export format v5 + import migration, fixture-checked), `src/constants.js` (JA label maps), `src/utils.js`, `src/storage.js` (keys + JSON helpers), `src/env.js` (TMDB key default from `.env.local`, read lazily — see its comment), `src/components/` (controls, AnimeCard, TmdbSection, DetailModal, SeiyuuModal, SettingsModal, StatsView), `src/styles.css`. Data: AniList GraphQL (no auth; browsing/search/detail/cast/relations) + TMDB REST (key; Japanese synopses + JP streaming providers via JustWatch data). Persistence: `window.storage` abstraction (shimmed to localStorage in `src/main.jsx`) under `kisetsucho:*` keys; ledger schema and export format in HANDOFF §5. The standalone build is `scripts/build_standalone.mjs` (real Vite build inlined into one HTML file; replaced the retired chat-era `build_html.py`).
 
 ## Hard invariants (HANDOFF §13 — never violate)
 
@@ -40,7 +41,7 @@ React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~690 lines) is 
 ## Verification before any commit (HANDOFF §9)
 
 1. `npm run build` passes; dev console clean.
-2. `npm run check:queries` → 26/26 balanced (committed port of the HANDOFF §9 snippet).
+2. `npm run check:queries` → 26/26 balanced (committed port of the HANDOFF §9 snippet); `npm run check:sync` and `npm run check:ledger` pass.
 3. Smoke test: browse current season → track a show through 視聴中→視聴済 with rating/memo → reload persists → detail modal shows JA synopsis + attributed 配信（日本） → seiyuu link round-trip → ledger grouping → export/import round-trip → 統計 renders.
 4. A pre-change export file still imports cleanly.
 

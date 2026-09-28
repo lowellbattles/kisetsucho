@@ -52,6 +52,7 @@ const GENRES = [
 const STATUSES = [
   { key: "want",     ja: "見たい",  en: "Want to Watch" },
   { key: "watching", ja: "視聴中",  en: "Watching" },
+  { key: "hold",     ja: "保留",    en: "On Hold" },
   { key: "watched",  ja: "視聴済",  en: "Watched" },
   { key: "dnf",      ja: "中断",    en: "Did Not Finish" },
 ];

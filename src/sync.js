@@ -7,6 +7,7 @@
 const STATUS_TO_ANNICT = {
   want: "WANNA_WATCH",
   watching: "WATCHING",
+  hold: "ON_HOLD",
   watched: "WATCHED",
   dnf: "STOP_WATCHING",
 };
@@ -22,8 +23,9 @@ const ANNICT_TO_STATUS = Object.fromEntries(
    - library:   fetchLibrary() rows { workId, annictId, malAnimeId, title, state, stateChangedAt }
    Conflict proposal: strictly-newer timestamp wins, ties go to remote. Both
    timestamps are approximations (local = entry update time, remote = status
-   change time) — the UI discloses this. Remote ON_HOLD / NO_STATE are
-   unsupported in v1 (a future 保留 status could map to ON_HOLD). */
+   change time) — the UI discloses this. All five local statuses map 1:1
+   (保留 ↔ ON_HOLD since export v5); remote NO_STATE on a matched work is
+   treated as "nothing there yet" and pushed. */
 function buildSyncPlan({ entries, annictMap, library }) {
   const byAnnict = new Map();
   const byMal = new Map();

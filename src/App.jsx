@@ -1,5 +1,5 @@
 /* ============================================================
-   季節帳 — Seasonal Anime Ledger (v4)
+   季節帳 — Seasonal Anime Ledger (ledger export v5)
    Data: AniList GraphQL (browsing/cast) + TMDB (JA synopses,
          JP streaming via JustWatch data — attribution required)
    Persistence: window.storage + export/import to JSON
@@ -18,6 +18,7 @@ import {
   STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, LASTEXPORT_KEY, BACKUPSNOOZE_KEY,
   storageGetJson, storageSetJson,
 } from "./storage.js";
+import { buildExport, migrateImport } from "./ledger.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./components/controls.jsx";
 import AnimeCard from "./components/AnimeCard.jsx";
 import DetailModal from "./components/DetailModal.jsx";
@@ -236,7 +237,7 @@ export default function App() {
 
   /* export / import */
   const exportLedger = () => {
-    const payload = { app: "kisetsucho", version: 4, exportedAt: new Date().toISOString(), entries };
+    const payload = buildExport(entries);
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -254,16 +255,18 @@ export default function App() {
     const r = new FileReader();
     r.onload = () => {
       try {
-        const data = JSON.parse(r.result);
-        const imported = data.entries || data;
-        if (!imported || typeof imported !== "object" || Array.isArray(imported)) throw new Error();
+        const { entries: imported, skipped, newer } = migrateImport(JSON.parse(r.result));
         const n = Object.keys(imported).length;
         setEntries((prev) => {
           const merged = { ...prev, ...imported };
           storageSetJson(STORE_KEY, merged);
           return merged;
         });
-        setIoMsg(`${n}件をインポートしました（同じ作品は上書き）`);
+        setIoMsg(
+          `${n}件をインポートしました（同じ作品は上書き）` +
+          (skipped ? `。${skipped}件は読み込めない形式のためスキップしました` : "") +
+          (newer ? "。※新しいバージョンの季節帳で作成されたファイルです" : "")
+        );
       } catch {
         setIoMsg("ファイルを読み込めませんでした。エクスポートしたJSONを選んでください。");
       }
@@ -351,7 +354,7 @@ export default function App() {
   }, [listEntries, ledgerSort]);
 
   const counts = useMemo(() => {
-    const c = { want: 0, watching: 0, watched: 0, dnf: 0 };
+    const c = Object.fromEntries(STATUSES.map((s) => [s.key, 0]));
     Object.values(entries).forEach((e) => { if (c[e.status] !== undefined) c[e.status]++; });
     return c;
   }, [entries]);

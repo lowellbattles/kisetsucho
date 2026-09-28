@@ -32,7 +32,8 @@ const entries = {
   14: { id: 14, status: "want", updatedAt: 1 },                            // unmapped ({none:true} cached)
   15: { id: 15, status: "want", updatedAt: 1 },                            // unmapped (no map entry)
   16: { id: 16, status: "want", updatedAt: 1 },                            // → push (remote NO_STATE)
-  17: { id: 17, status: "watching", updatedAt: 1 },                        // unsupported (remote ON_HOLD)
+  17: { id: 17, status: "watching", updatedAt: 1 },                        // conflict vs remote ON_HOLD (保留, v5)
+  18: { id: 18, status: "bogus", updatedAt: 1 },                           // unsupported (unknown local status)
 };
 
 const annictMap = {
@@ -43,6 +44,7 @@ const annictMap = {
   14: { none: true },
   16: { annictId: 216, id: "W216" },
   17: { annictId: 217, id: "W217" },
+  18: { annictId: 218, id: "W218" },
 };
 
 const library = [
@@ -53,27 +55,29 @@ const library = [
   row({ annictId: 217, malAnimeId: "1217", workId: "W217", state: "ON_HOLD" }),
   row({ annictId: 300, malAnimeId: "1300", workId: "W300", state: "WANNA_WATCH", title: "取り込み対象" }), // → pull
   row({ annictId: 301, malAnimeId: null, workId: "W301", state: "WATCHED" }),   // unmapped (no MAL id)
-  row({ annictId: 302, malAnimeId: "1302", workId: "W302", state: "ON_HOLD" }), // unsupported
+  row({ annictId: 302, malAnimeId: "1302", workId: "W302", state: "ON_HOLD" }), // → pull as 保留
+  row({ annictId: 303, malAnimeId: "1303", workId: "W303", state: "NO_STATE" }), // unsupported (no local status)
 ];
 
 const plan = buildSyncPlan({ entries, annictMap, library });
 const ids = (list) => list.map((x) => x.entry?.id ?? x.remote?.annictId ?? x.annictId).sort((a, b) => a - b).join(",");
 
 check("status maps are total inverses",
-  Object.keys(STATUS_TO_ANNICT).length === 4 &&
-  Object.keys(ANNICT_TO_STATUS).length === 4 &&
+  Object.keys(STATUS_TO_ANNICT).length === 5 &&
+  Object.keys(ANNICT_TO_STATUS).length === 5 &&
   Object.entries(STATUS_TO_ANNICT).every(([k, v]) => ANNICT_TO_STATUS[v] === k));
 
 check("push: local-only entry + NO_STATE remote", ids(plan.toPush) === "10,16");
 check("push: carries workRef and mapped state",
   plan.toPush.every((t) => t.workRef?.id && t.targetState === STATUS_TO_ANNICT[t.entry.status]));
 
-check("pull: remote-only supported row", ids(plan.toPull) === "300");
+check("pull: remote-only supported rows (incl. ON_HOLD)", ids(plan.toPull) === "300,302");
+const pull300 = plan.toPull.find((r) => r.annictId === 300);
 check("pull: carries join fields",
-  plan.toPull[0]?.workId === "W300" && plan.toPull[0]?.malAnimeId === "1300" &&
-  plan.toPull[0]?.state === "WANNA_WATCH" && plan.toPull[0]?.title === "取り込み対象");
+  pull300?.workId === "W300" && pull300?.malAnimeId === "1300" &&
+  pull300?.state === "WANNA_WATCH" && pull300?.title === "取り込み対象");
 
-check("conflicts: both directions detected", ids(plan.conflicts) === "12,13");
+check("conflicts: both directions detected", ids(plan.conflicts) === "12,13,17");
 check("conflict local-newer proposes local",
   plan.conflicts.find((c) => c.entry.id === 12)?.proposal === "local");
 check("conflict remote-newer proposes remote",
@@ -82,7 +86,10 @@ check("conflict tolerates old map shape (no global id)",
   plan.conflicts.find((c) => c.entry.id === 13)?.remote.workId === "W213");
 
 check("unmapped: {none:true}, missing map, MAL-less remote", ids(plan.unmapped) === "14,15,301");
-check("unsupported: remote ON_HOLD (matched + unmatched)", ids(plan.unsupported) === "17,302");
+check("unsupported: unknown local status + remote NO_STATE", ids(plan.unsupported) === "18,303");
+check("保留 ↔ ON_HOLD round-trips", STATUS_TO_ANNICT.hold === "ON_HOLD" && ANNICT_TO_STATUS.ON_HOLD === "hold");
+check("pulled ON_HOLD carries its state", plan.toPull.find((r) => r.annictId === 302)?.state === "ON_HOLD");
+check("ON_HOLD conflict proposes newer remote", plan.conflicts.find((c) => c.entry.id === 17)?.proposal === "remote");
 check("in-sync entry produces no work",
   ![...plan.toPush, ...plan.conflicts].some((x) => x.entry.id === 11));
 

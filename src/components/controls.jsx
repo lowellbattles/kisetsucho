@@ -58,7 +58,7 @@ function StatusButtons({ entry, onSet, compact }) {
 }
 
 function ProgressControls({ entry, onProgress }) {
-  if (!entry || entry.status !== "watching") return null;
+  if (!entry || (entry.status !== "watching" && entry.status !== "hold")) return null;
   const total = entry.episodes || 0;
   const p = entry.progress || 0;
   const pct = total ? Math.min(100, (p / total) * 100) : 0;

@@ -146,9 +146,9 @@ query ($states: [StatusState!], $first: Int, $after: String) {
   }
 }`;
 
-/* The 4 states the v1 sync supports (ON_HOLD / NO_STATE are not requested —
-   a future 保留 status could map ON_HOLD, HANDOFF §10.1). */
-const LIBRARY_STATES = ["WANNA_WATCH", "WATCHING", "WATCHED", "STOP_WATCHING"];
+/* The 5 states the sync supports (保留 ↔ ON_HOLD since export v5);
+   NO_STATE is never requested. */
+const LIBRARY_STATES = ["WANNA_WATCH", "WATCHING", "ON_HOLD", "WATCHED", "STOP_WATCHING"];
 
 /* Read the authenticated user's whole library, paginated 100/page with a
    safety cap (~1000 entries). Rows with a null status are skipped. */

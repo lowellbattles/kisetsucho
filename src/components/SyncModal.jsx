@@ -13,13 +13,12 @@ import { buildSyncPlan, STATUS_TO_ANNICT, ANNICT_TO_STATUS } from "../sync.js";
    most-recent-timestamp proposal, overridable per item (HANDOFF §10.1). */
 
 const STATUS_JA = Object.fromEntries(STATUSES.map((s) => [s.key, s.ja]));
-/* Annict StatusState → JA label via the local status labels, plus the states
-   the v1 sync doesn't support (FORMAT_JA-style label map). */
+/* Annict StatusState → JA label via the local status labels, plus NO_STATE
+   which has no local counterpart (FORMAT_JA-style label map). */
 const STATE_JA = {
   ...Object.fromEntries(
     Object.entries(ANNICT_TO_STATUS).map(([state, key]) => [state, STATUS_JA[key]])
   ),
-  ON_HOLD: "保留",
   NO_STATE: "未設定",
 };
 

@@ -46,7 +46,7 @@ function StatsView({ entries }) {
   }, [entries]);
 
   const counts = useMemo(() => {
-    const c = { want: 0, watching: 0, watched: 0, dnf: 0 };
+    const c = Object.fromEntries(STATUSES.map((s) => [s.key, 0]));
     Object.values(entries).forEach((e) => { if (c[e.status] !== undefined) c[e.status]++; });
     return c;
   }, [entries]);

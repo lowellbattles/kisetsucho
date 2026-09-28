@@ -156,7 +156,7 @@ In the Vite/local build, `src/main.jsx` shims this onto `localStorage` (see prov
 ```ts
 {
   id: number,              // AniList media id — REQUIRED, primary key
-  status: "want" | "watching" | "watched" | "dnf",   // REQUIRED
+  status: "want" | "watching" | "hold" | "watched" | "dnf",   // REQUIRED ("hold" = 保留, since v5)
   title: { native?, romaji?, english? },
   cover: string,           // AniList cover URL snapshot
   format: string,          // AniList MediaFormat
@@ -174,9 +174,11 @@ In the Vite/local build, `src/main.jsx` shims this onto `localStorage` (see prov
 
 **Export format** (round-trips through import; import merges with imported-wins semantics):
 ```json
-{ "app": "kisetsucho", "version": 4, "exportedAt": "ISO-8601", "entries": { ... } }
+{ "app": "kisetsucho", "version": 5, "exportedAt": "ISO-8601", "entries": { ... } }
 ```
-Import also accepts a bare entries map for resilience. **Any schema change requires a version bump plus a migration path for old export files** — the user has real data and has already been burned once (see below).
+Import also accepts a bare entries map for resilience. Export building and import migration live in `src/ledger.js` (`buildExport`, `migrateImport`, per-version `MIGRATIONS` table), fixture-checked by `npm run check:ledger`.
+
+**Version history:** v4 = chat-era format. **v5 (2026-09)** adds the `hold` (保留) status and optional snapshot fields — additive only, so v4 files import unchanged. Entries with no usable id or an unknown status (only possible from a newer app version) are skipped and counted in the import message; files from a newer version still import with a warning. **Any schema change requires a version bump plus a migration path for old export files** — the user has real data and has already been burned once (see below).
 
 **History lesson — the localStorage origin problem:** the user's v1 data vanished moving to v2 because browsers give `file://`-opened HTML inconsistent, sometimes per-file storage origins. That is why export/import exists and why the Vite `localhost` origin (stable) matters. Treat the export file as the canonical backup; never remove or weaken that feature.
 
