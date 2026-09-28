@@ -326,6 +326,7 @@
   display: flex; align-items: flex-start; justify-content: center; padding: 4vh 14px; overflow-y: auto;
 }
 .seiyuu-overlay { z-index: 60; }
+.modal:focus { outline: none; }
 .modal {
   position: relative; background: var(--card); border-radius: 12px; max-width: 760px; width: 100%;
   padding: 26px; margin-bottom: 4vh;

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
+import Modal from "./Modal.jsx";
 import { gql, STAFF_QUERY } from "../api/anilist.js";
 import { ROLE_JA } from "../constants.js";
 import { seasonJa } from "../utils.js";
@@ -12,6 +13,7 @@ function SeiyuuModal({ id, showAdult, onClose, onOpenWork }) {
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const titleId = useId();
 
   const fetchPage = useCallback(async (p, append) => {
     setLoading(true);
@@ -35,11 +37,10 @@ function SeiyuuModal({ id, showAdult, onClose, onOpenWork }) {
   const visible = edges.filter((e) => e.node && (showAdult || !e.node.isAdult));
 
   return (
-    <div className="overlay seiyuu-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <Modal onClose={onClose} labelledBy={titleId} overlayClassName="seiyuu-overlay">
         <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
-        {err && <p className="error-inline">読み込みに失敗しました — {err}</p>}
-        {!staff && !err && <p className="loading-inline">読み込み中…</p>}
+        {err && <p className="error-inline" role="alert">読み込みに失敗しました — {err}</p>}
+        {!staff && !err && <p className="loading-inline" role="status">読み込み中…</p>}
         {staff && (
           <>
             <div className="seiyuu-head">
@@ -49,7 +50,7 @@ function SeiyuuModal({ id, showAdult, onClose, onOpenWork }) {
               )}
               <div>
                 <p className="eyebrow">声優 ・ Voice Actor</p>
-                <h2 className="modal-title">{staff.name?.native || staff.name?.full}</h2>
+                <h2 className="modal-title" id={titleId}>{staff.name?.native || staff.name?.full}</h2>
                 {staff.name?.native && staff.name?.full && staff.name.full !== staff.name.native && (
                   <p className="title-sub big">{staff.name.full}</p>
                 )}
@@ -79,15 +80,14 @@ function SeiyuuModal({ id, showAdult, onClose, onOpenWork }) {
                   );
                 })}
               </ul>
-              {loading && <p className="loading-inline">読み込み中…</p>}
+              {loading && <p className="loading-inline" role="status">読み込み中…</p>}
               {hasNext && !loading && (
                 <button className="load-more" onClick={() => fetchPage(page + 1, true)}>もっと見る</button>
               )}
             </section>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 

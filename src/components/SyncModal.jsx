@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
+import Modal from "./Modal.jsx";
 import { STATUSES } from "../constants.js";
 import { fetchWorkMeta, resolveAnnictMapGaps, fetchLibrary, pushStatus } from "../api/annict.js";
 import { fetchMediaByMalIds } from "../api/anilist.js";
@@ -56,6 +57,7 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, 
   const [choices, setChoices] = useState({}); // conflict entry.id → "local" | "remote"
   const [result, setResult] = useState(null); // { pushed, pulled, failures, misses }
   const [error, setError] = useState(null);
+  const titleId = useId();
   /* Guards a user-triggered run() against unmount mid-flight. The body reset
      matters: StrictMode mounts → cleans up → remounts the same instance, and
      without re-setting true the flag would stay false forever after remount. */
@@ -213,14 +215,13 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, 
     : "準備中…";
 
   return (
-    <div className="overlay" onClick={closable ? onClose : undefined}>
-      <div className="modal settings-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <Modal onClose={onClose} closable={closable} labelledBy={titleId} className="settings-modal">
         {closable && <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>}
-        <h2 className="modal-title">Annictと同期 <span className="en-hint">Annict Sync</span></h2>
+        <h2 className="modal-title" id={titleId}>Annictと同期 <span className="en-hint">Annict Sync</span></h2>
 
         {phase === "prepare" && (
           <section className="modal-section">
-            <p className="sync-progress">{progressLine}</p>
+            <p className="sync-progress" aria-live="polite">{progressLine}</p>
             <p className="fine">
               初回はローカルの記録とAnnict作品の照合に時間がかかることがあります（1件ずつ照会）。
             </p>
@@ -337,14 +338,14 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, 
 
         {phase === "running" && (
           <section className="modal-section">
-            <p className="sync-progress">{progressLine}</p>
+            <p className="sync-progress" aria-live="polite">{progressLine}</p>
             <p className="fine">実行中はこの画面を閉じられません。</p>
           </section>
         )}
 
         {phase === "done" && result && (
           <section className="modal-section">
-            <p className="sync-summary">
+            <p className="sync-summary" role="status">
               送信 {result.pushed}件 ・ 取り込み {result.pulled}件 ・ 失敗 {result.failures.length}件 ・ 未対応 {skippedCount + result.misses.length}件
             </p>
             {result.failures.map((f, i) => (
@@ -358,8 +359,7 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, 
             </div>
           </section>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 

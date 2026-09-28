@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useId } from "react";
+import Modal from "./Modal.jsx";
 
 /* ---------- settings modal ---------- */
 
 function SettingsModal({ settings, onSave, onClose }) {
   const [key, setKey] = useState(settings.tmdbKey || "");
   const [annict, setAnnict] = useState(settings.annictToken || "");
+  const titleId = useId();
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal settings-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <Modal onClose={onClose} labelledBy={titleId} className="settings-modal">
         <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
-        <h2 className="modal-title">設定 <span className="en-hint">Settings</span></h2>
+        <h2 className="modal-title" id={titleId}>設定 <span className="en-hint">Settings</span></h2>
         <section className="modal-section">
           <h4>TMDB APIキー</h4>
           <p className="fine">
@@ -22,6 +23,7 @@ function SettingsModal({ settings, onSave, onClose }) {
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder="TMDB API Key"
+            aria-label="TMDB APIキー"
             autoComplete="off"
           />
         </section>
@@ -39,6 +41,7 @@ function SettingsModal({ settings, onSave, onClose }) {
             value={annict}
             onChange={(e) => setAnnict(e.target.value)}
             placeholder="Annict Access Token"
+            aria-label="Annictトークン"
             autoComplete="off"
           />
         </section>
@@ -50,8 +53,7 @@ function SettingsModal({ settings, onSave, onClose }) {
             保存
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

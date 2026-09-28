@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
+import Modal from "./Modal.jsx";
 import { gql, DETAIL_QUERY } from "../api/anilist.js";
 import { GENRES, FORMAT_JA, RELATION_JA } from "../constants.js";
 import { snapshotFields, seasonJa, airDateLine, officialLink, infoLinks, anilistStreamingLinks } from "../utils.js";
@@ -14,6 +15,7 @@ function DetailModal({
 }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const titleId = useId();
 
   useEffect(() => {
     let live = true;
@@ -36,11 +38,10 @@ function DetailModal({
   const dateLine = data ? airDateLine(data) : "";
 
   return (
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <Modal onClose={onClose} labelledBy={titleId}>
         <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
-        {err && <p className="error-inline">読み込みに失敗しました — {err}</p>}
-        {!data && !err && <p className="loading-inline">読み込み中…</p>}
+        {err && <p className="error-inline" role="alert">読み込みに失敗しました — {err}</p>}
+        {!data && !err && <p className="loading-inline" role="status">読み込み中…</p>}
         {data && (
           <>
             <div className="modal-head">
@@ -55,7 +56,7 @@ function DetailModal({
                   {data.episodes ? ` ・ 全${data.episodes}話` : ""}
                   {data.isAdult ? " ・ R18" : ""}
                 </p>
-                <h2 className="modal-title">{t.native || t.romaji}</h2>
+                <h2 className="modal-title" id={titleId}>{t.native || t.romaji}</h2>
                 {(t.english || t.romaji) && <p className="title-sub big">{t.english || t.romaji}</p>}
                 {dateLine && <p className="meta">{dateLine}</p>}
                 {data.studios?.nodes?.length > 0 && (
@@ -168,8 +169,7 @@ function DetailModal({
             )}
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 

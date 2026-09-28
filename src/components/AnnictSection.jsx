@@ -73,8 +73,10 @@ function AnnictSection({ media, token, mapEntry, onMap, onSnapshot }) {
           Annictトークンを設定すると、日本のTV放送情報・満足度・スタッフ情報が表示されます（⚙ 設定）。
         </p>
       )}
-      {state.loading && <p className="fine">Annictを照会中…</p>}
-      {state.error && <p className="fine">Annict照会エラー：{state.error}</p>}
+      <div aria-live="polite">
+        {state.loading && <p className="fine">Annictを照会中…</p>}
+        {state.error && <p className="fine">Annict照会エラー：{state.error}</p>}
+      </div>
       {state.nomal && (
         <p className="fine">この作品はMAL IDが登録されていないため、Annict情報を取得できません。</p>
       )}
