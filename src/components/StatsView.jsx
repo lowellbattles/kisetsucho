@@ -149,9 +149,9 @@ function StatsView({ entries }) {
 
       {stats.hasPace && (
         <section className="stat-section">
-          <h3 className="group-header">月別ペース <span className="group-count">Monthly pace — last {PACE_MONTHS} months</span></h3>
+          <h3 className="group-header">月別ペース <span className="group-count">Monthly pace</span></h3>
           <p className="stats-line">
-            今年 {stats.thisYear}本 ・ 過去12か月 平均 {(stats.last12 / 12).toFixed(1)}本/月
+            直近{PACE_MONTHS}か月 ・ 今年 {stats.thisYear}本 ・ 過去12か月 平均 {(stats.last12 / 12).toFixed(1)}本/月
           </p>
           <div className="pace-chart" role="img"
             aria-label={`月別の視聴済数、直近${PACE_MONTHS}か月`}>
@@ -171,13 +171,15 @@ function StatsView({ entries }) {
 
       {stats.hasPace && (
         <section className="stat-section">
-          <h3 className="group-header">連続記録 <span className="group-count">Streaks — consecutive months with a completion</span></h3>
+          <h3 className="group-header">連続記録 <span className="group-count">Streaks</span></h3>
           <div className="stat-cards">
             <div className="stat-card">
               <span className="stat-num">{stats.streaks.best.len}か月</span>
               <span className="stat-label">
-                最長連続{stats.streaks.best.len > 0 &&
-                  `（${idxLabel(stats.streaks.best.from)}〜${idxLabel(stats.streaks.best.to)}）`}
+                最長連続{stats.streaks.best.len > 0 && (
+                  stats.streaks.best.from === stats.streaks.best.to
+                    ? `（${idxLabel(stats.streaks.best.from)}）`
+                    : `（${idxLabel(stats.streaks.best.from)}〜${idxLabel(stats.streaks.best.to)}）`)}
               </span>
             </div>
             <div className="stat-card">
@@ -190,7 +192,7 @@ function StatsView({ entries }) {
 
       {(stats.topStudios.length > 0 || stats.topGenres.length > 0) && (
         <section className="stat-section">
-          <h3 className="group-header">よく見るスタジオ・ジャンル <span className="group-count">Top studios &amp; genres</span></h3>
+          <h3 className="group-header">よく見るスタジオ・ジャンル <span className="group-count">Favorites</span></h3>
           <div className="stat-split">
             {stats.topStudios.length > 0 && (
               <div>
