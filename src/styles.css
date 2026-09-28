@@ -180,6 +180,8 @@
   border: 1px solid var(--line); border-radius: 6px; resize: vertical;
 }
 .memo:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.season-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.season-pick .provider-label { margin: 0 4px 0 0; }
 .memo-wrap { position: relative; }
 .memo-wrap .memo { display: block; }
 .memo-status {

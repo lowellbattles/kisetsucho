@@ -149,7 +149,7 @@ In the Vite/local build, `src/main.jsx` shims this onto `localStorage` (see prov
 |---|---|
 | `kisetsucho:entries` | the ledger — `{ [anilistId]: Entry }` |
 | `kisetsucho:settings` | `{ tmdbKey: string }` (extend here for Annict token) |
-| `kisetsucho:tmdbmap` | `{ [anilistId]: {id, type: "tv"\|"movie"} \| {none: true} }` |
+| `kisetsucho:tmdbmap` | `{ [anilistId]: {id, type: "tv"\|"movie", season?} \| {none: true} }` — `season` (2026-09): undefined = not decided yet (auto-pick by air date, then cached), `null` = whole series, n = TMDB season n |
 
 **Entry schema** (fields optional unless noted):
 

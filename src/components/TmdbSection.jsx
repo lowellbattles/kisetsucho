@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { tmdbFindCandidates, tmdbDetails, TMDB_IMG } from "../api/tmdb.js";
 import { stripHtml } from "../utils.js";
 
@@ -9,9 +9,15 @@ function TmdbSection({ media, tmdbKey, mapEntry, onMap, anilistDescription, anil
   const [fixOpen, setFixOpen] = useState(false);
   const [candidates, setCandidates] = useState(null);
   const [showEn, setShowEn] = useState(false);
+  const fetchedRef = useRef(null); // [id, type, season] of the info on screen
 
   useEffect(() => {
     if (!media || !tmdbKey) { setState({ nokey: true }); return; }
+    // persisting an auto-picked season re-runs this effect with the same
+    // target — keep what's on screen instead of refetching
+    const target = mapEntry && !mapEntry.none
+      ? JSON.stringify([media.id, mapEntry.id, mapEntry.type, mapEntry.season ?? null]) : null;
+    if (target && target === fetchedRef.current) return;
     let live = true;
     (async () => {
       setState({ loading: true });
@@ -26,14 +32,17 @@ function TmdbSection({ media, tmdbKey, mapEntry, onMap, anilistDescription, anil
           return; // effect re-runs with the stored mapping
         }
         if (m.none) { if (live) setState({ none: true }); return; }
-        const info = await tmdbDetails(m, tmdbKey);
-        if (live) setState({ info });
+        const info = await tmdbDetails(m, tmdbKey, media);
+        if (!live) return;
+        fetchedRef.current = JSON.stringify([media.id, m.id, m.type, info.season ?? null]);
+        setState({ info });
+        if (info.autoPicked) onMap(media.id, { ...m, season: info.season }); // match once, cache
       } catch (e) {
         if (live) setState({ error: e.message });
       }
     })();
     return () => { live = false; };
-  }, [media?.id, tmdbKey, mapEntry?.id, mapEntry?.none]);
+  }, [media?.id, tmdbKey, mapEntry?.id, mapEntry?.none, mapEntry?.season]);
 
   const openFix = async () => {
     setFixOpen(!fixOpen);
@@ -57,14 +66,23 @@ function TmdbSection({ media, tmdbKey, mapEntry, onMap, anilistDescription, anil
         <h4>
           あらすじ{" "}
           <span className="en-hint">
-            {ja ? "Synopsis（日本語・TMDB）" : "Synopsis（英語・AniList）"}
+            {ja
+              ? `Synopsis（日本語・TMDB${info?.seasonUsed ? `・シーズン${info.season}` : ""}）`
+              : "Synopsis（英語・AniList）"}
           </span>
         </h4>
-        {state.loading && <p className="fine">TMDBを照会中…</p>}
-        {state.error && <p className="fine">TMDB照会エラー：{state.error}</p>}
+        <div aria-live="polite">
+          {state.loading && <p className="fine">TMDBを照会中…</p>}
+          {state.error && <p className="fine">TMDB照会エラー：{state.error}</p>}
+        </div>
         {ja ? (
           <>
             <p className="synopsis full">{ja}</p>
+            {info.season != null && !info.seasonUsed && (
+              <p className="fine">
+                シーズン{info.season}の日本語あらすじがTMDBにないため、シリーズ全体のあらすじを表示しています。
+              </p>
+            )}
             {en && (
               <>
                 <button className="text-link" onClick={() => setShowEn(!showEn)}>
@@ -92,6 +110,26 @@ function TmdbSection({ media, tmdbKey, mapEntry, onMap, anilistDescription, anil
           <button className="text-link" onClick={openFix}>
             {fixOpen ? "候補を閉じる" : "TMDBの照合を修正する"}
           </button>
+        )}
+        {fixOpen && info?.seasons?.length > 1 && (
+          <div className="season-pick">
+            <span className="provider-label">シーズン</span>
+            <button
+              className={info.season == null ? "chip active" : "chip"}
+              onClick={() => onMap(media.id, { ...mapEntry, season: null })}
+            >
+              シリーズ全体
+            </button>
+            {info.seasons.map((s) => (
+              <button
+                key={s.n}
+                className={info.season === s.n ? "chip active" : "chip"}
+                onClick={() => onMap(media.id, { ...mapEntry, season: s.n })}
+              >
+                S{s.n}{s.year ? `（${s.year}）` : ""}
+              </button>
+            ))}
+          </div>
         )}
         {fixOpen && (
           <div className="candidate-list">
