@@ -28,12 +28,13 @@ import SeiyuuModal from "./components/SeiyuuModal.jsx";
 import SettingsModal from "./components/SettingsModal.jsx";
 import SyncModal from "./components/SyncModal.jsx";
 import StatsView from "./components/StatsView.jsx";
+import CalendarView from "./components/CalendarView.jsx";
 
 /* ---------- main app ---------- */
 
 export default function App() {
   const now = new Date();
-  const [view, setView] = useState("browse"); // browse | search | list | stats
+  const [view, setView] = useState("browse"); // browse | search | list | calendar | stats
   const [scope, setScope] = useState("season");
   const [year, setYear] = useState(now.getFullYear());
   const [season, setSeason] = useState(currentSeason());
@@ -472,6 +473,9 @@ export default function App() {
           <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>
             記録<span className="nav-en">My Ledger</span>
           </button>
+          <button className={view === "calendar" ? "active" : ""} onClick={() => setView("calendar")}>
+            放送<span className="nav-en">Airing</span>
+          </button>
           <button className={view === "stats" ? "active" : ""} onClick={() => setView("stats")}>
             統計<span className="nav-en">Stats</span>
           </button>
@@ -768,6 +772,15 @@ export default function App() {
             </div>
           ))}
         </main>
+      )}
+
+      {view === "calendar" && ready && (
+        <CalendarView
+          entries={entries}
+          annictToken={settings.annictToken || ""}
+          annictMap={annictMap}
+          onOpen={setDetailId}
+        />
       )}
 
       {view === "stats" && <StatsView entries={entries} />}

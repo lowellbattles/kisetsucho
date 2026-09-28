@@ -131,6 +131,25 @@ query ($ids: [Int]) {
   }
 }`;
 
+/* 放送 calendar: upcoming airings for ledger works, one request per 50 ids.
+   Times are AniList's first-broadcast airingAt (unix seconds) — for anime
+   that is the Japanese premiere slot. Finished works are filtered out
+   server-side by status_in. */
+const AIRING_QUERY = `
+query ($ids: [Int]) {
+  Page(perPage: ${PER_PAGE}) {
+    media(id_in: $ids, type: ANIME, status_in: [RELEASING, NOT_YET_RELEASED]) {
+      id
+      title { native romaji english }
+      coverImage { medium }
+      episodes
+      format
+      nextAiringEpisode { airingAt episode }
+      airingSchedule(notYetAired: true, perPage: 10) { nodes { airingAt episode } }
+    }
+  }
+}`;
+
 async function chunkedMediaLookup(query, ids, keyOf) {
   const map = new Map();
   for (let i = 0; i < ids.length; i += PER_PAGE) {
@@ -152,6 +171,9 @@ const fetchMediaByIds = (ids) => chunkedMediaLookup(BY_IDS_QUERY, ids, (m) => m.
    AniList doesn't know are simply absent from the Map. */
 const fetchMediaByMalIds = (malIds) => chunkedMediaLookup(BY_MAL_IDS_QUERY, malIds, (m) => m.idMal);
 
+/* AniList ids → airing data for works still releasing / upcoming. */
+const fetchAiringByIds = (ids) => chunkedMediaLookup(AIRING_QUERY, ids, (m) => m.id);
+
 async function gql(query, variables) {
   const res = await fetch(API, {
     method: "POST",
@@ -168,5 +190,5 @@ async function gql(query, variables) {
 
 export {
   gql, buildBrowseQuery, buildSearchQuery, DETAIL_QUERY, STAFF_QUERY,
-  fetchMediaByIds, fetchMediaByMalIds, PER_PAGE, MAX_AUTO_PAGES,
+  fetchMediaByIds, fetchMediaByMalIds, fetchAiringByIds, PER_PAGE, MAX_AUTO_PAGES,
 };

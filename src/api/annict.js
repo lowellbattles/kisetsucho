@@ -202,6 +202,38 @@ async function fetchWorkMeta(annictIds, token) {
   return map;
 }
 
+const WORK_CHANNELS_QUERY = `
+query ($ids: [Int!]) {
+  searchWorks(annictIds: $ids, first: 50) {
+    nodes {
+      annictId
+      syobocalTid
+      programs(first: 50) {
+        nodes { rebroadcast channel { name } }
+      }
+    }
+  }
+}`;
+
+/* 放送 calendar enrichment: first-run channel names per work (rebroadcasts
+   dropped, de-duplicated, first-seen order) + syobocalTid. Chunked ×50.
+   Returns Map annictId → { channels, syobocalTid }. */
+async function fetchWorkChannels(annictIds, token) {
+  const map = new Map();
+  for (let i = 0; i < annictIds.length; i += 50) {
+    const d = await annictGql(WORK_CHANNELS_QUERY, { ids: annictIds.slice(i, i + 50) }, token);
+    for (const w of d.searchWorks?.nodes || []) {
+      const channels = [];
+      for (const p of w.programs?.nodes || []) {
+        const name = p.channel?.name;
+        if (name && !p.rebroadcast && !channels.includes(name)) channels.push(name);
+      }
+      map.set(w.annictId, { channels, syobocalTid: w.syobocalTid ?? null });
+    }
+  }
+  return map;
+}
+
 /* Resolve annictmap gaps for a list of ledger entries (sync 準備中 + the
    ledger's 読みがなを取得). Ledger entries don't snapshot idMal, so light
    AniList stubs are fetched first; then one findAnnictWork per entry with
@@ -255,5 +287,5 @@ async function pushStatus(workId, state, token) {
 
 export {
   annictGql, toAnnictSeason, findAnnictWork, annictWorkDetails,
-  fetchLibrary, fetchWorkMeta, resolveAnnictMapGaps, pushStatus,
+  fetchLibrary, fetchWorkMeta, fetchWorkChannels, resolveAnnictMapGaps, pushStatus,
 };

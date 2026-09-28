@@ -180,6 +180,31 @@
   border: 1px solid var(--line); border-radius: 6px; resize: vertical;
 }
 .memo:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* 放送 calendar */
+.cal-wrap .page-title { margin-top: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.cal-day { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.cal-day.today { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+.cal-day-head { font-family: var(--serif); font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+.cal-today { font-family: var(--sans); font-size: 10.5px; color: #fff; background: var(--accent); border-radius: 999px; padding: 1px 7px; }
+.cal-none { margin: 4px 0; color: var(--ink-soft); font-size: 12px; }
+.cal-day.no-items { display: flex; align-items: center; gap: 12px; padding-top: 7px; padding-bottom: 7px; }
+.cal-day.no-items .cal-day-head, .cal-day.no-items .cal-none { margin: 0; }
+.cal-list, .cal-later { list-style: none; margin: 0; padding: 0; }
+.cal-list li + li { border-top: 1px dashed var(--line); }
+.cal-later { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
+.cal-item {
+  display: flex; gap: 10px; width: 100%; padding: 7px 0; text-align: left;
+  background: none; border: none; cursor: pointer; font-family: var(--sans); color: var(--ink);
+}
+.cal-item:hover .cal-title { color: var(--accent); text-decoration: underline; }
+.cal-time { flex: none; width: 42px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cal-title { font-family: var(--serif); font-size: 13.5px; line-height: 1.35; }
+.cal-meta { font-size: 11px; color: var(--ink-soft); }
+.cal-syoboi { display: inline-block; margin: -4px 0 6px 52px; font-size: 10.5px; color: var(--ink-soft); }
+.cal-syoboi:hover { color: var(--accent); }
+
 .season-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
 .season-pick .provider-label { margin: 0 4px 0 0; }
 .memo-wrap { position: relative; }
@@ -427,6 +452,8 @@
   .result-count { margin-left: 0; }
   .io-row { margin-left: 0; }
   .bar-label { width: 64px; }
+  .nav button { padding: 7px 9px; }
+  .nav { margin-left: 0; width: 100%; justify-content: space-between; }
 }
 @media (prefers-reduced-motion: reduce) {
   .season-tab { transition: none; }
