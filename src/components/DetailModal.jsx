@@ -67,7 +67,7 @@ function DetailModal({
                   </p>
                 )}
                 <StatusButtons entry={entry} onSet={onSet} />
-                <ProgressControls entry={entry} onProgress={onProgress} />
+                <ProgressControls entry={entry} onProgress={onProgress} onComplete={onSet} />
                 <WatchedControls entry={entry} onRate={onRate} onDate={onDate} onRewatch={onRewatch} />
                 {entry && <MemoBox entry={entry} onSave={onMemo} />}
               </div>

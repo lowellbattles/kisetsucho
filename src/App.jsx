@@ -754,7 +754,11 @@ export default function App() {
                         {seasonJa(e.season, e.seasonYear)}
                         {e.format ? ` ・ ${FORMAT_JA[e.format] || e.format}` : ""}
                       </p>
-                      <ProgressControls entry={e} onProgress={setProgress(stubFromEntry(e))} />
+                      <ProgressControls
+                        entry={e}
+                        onProgress={setProgress(stubFromEntry(e))}
+                        onComplete={setStatus(stubFromEntry(e))}
+                      />
                       <WatchedControls
                         entry={e}
                         onRate={setRating(stubFromEntry(e))}

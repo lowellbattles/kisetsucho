@@ -58,12 +58,16 @@ function StatusButtons({ entry, onSet, compact }) {
   );
 }
 
-function ProgressControls({ entry, onProgress }) {
+/* onComplete (optional): when progress reaches the episode count, offer the
+   視聴済 promotion inline (HANDOFF §10 P3) — a suggestion, never automatic. */
+function ProgressControls({ entry, onProgress, onComplete }) {
   if (!entry || (entry.status !== "watching" && entry.status !== "hold")) return null;
   const total = entry.episodes || 0;
   const p = entry.progress || 0;
   const pct = total ? Math.min(100, (p / total) * 100) : 0;
+  const finished = total > 0 && p >= total;
   return (
+    <>
     <div className="progress-row">
       <button className="mini-btn" aria-label="1話戻す" onClick={() => onProgress(Math.max(0, p - 1))}>−</button>
       <span className="progress-text">{p}{total ? ` / ${total}` : ""}話</span>
@@ -78,6 +82,13 @@ function ProgressControls({ entry, onProgress }) {
         </span>
       )}
     </div>
+    {finished && onComplete && (
+      <div className="complete-suggest" role="status">
+        <span>全{total}話を視聴しました。</span>
+        <button className="text-link" onClick={() => onComplete("watched")}>視聴済にする</button>
+      </div>
+    )}
+    </>
   );
 }
 

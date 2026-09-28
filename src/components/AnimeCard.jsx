@@ -53,7 +53,7 @@ function AnimeCard({ media, entry, onSet, onRate, onDate, onRewatch, onProgress,
           </p>
         )}
         <StatusButtons entry={entry} onSet={onSet} compact />
-        <ProgressControls entry={entry} onProgress={onProgress} />
+        <ProgressControls entry={entry} onProgress={onProgress} onComplete={onSet} />
         <WatchedControls entry={entry} onRate={onRate} onDate={onDate} onRewatch={onRewatch} />
       </div>
     </article>
