@@ -20,6 +20,7 @@ const MEDIA_FIELDS = `
   isAdult
   siteUrl
   studios(isMain: true) { nodes { name } }
+  genres
   externalLinks { site url type language }
 `;
 
@@ -57,7 +58,6 @@ const DETAIL_QUERY = `
 query ($id: Int) {
   Media(id: $id) {
     ${MEDIA_FIELDS}
-    genres
     duration
     characters(sort: [ROLE, RELEVANCE], perPage: 12) {
       edges {

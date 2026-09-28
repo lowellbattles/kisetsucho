@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { gql, DETAIL_QUERY } from "../api/anilist.js";
 import { GENRES, FORMAT_JA, RELATION_JA } from "../constants.js";
-import { seasonJa, airDateLine, officialLink, infoLinks, anilistStreamingLinks } from "../utils.js";
+import { snapshotFields, seasonJa, airDateLine, officialLink, infoLinks, anilistStreamingLinks } from "../utils.js";
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./controls.jsx";
 import TmdbSection from "./TmdbSection.jsx";
 import AnnictSection from "./AnnictSection.jsx";
@@ -10,7 +10,7 @@ import AnnictSection from "./AnnictSection.jsx";
 
 function DetailModal({
   id, entry, tmdbKey, tmdbMap, onMap, annictToken, annictMap, onAnnictMap, showAdult,
-  onClose, onSet, onRate, onDate, onRewatch, onProgress, onMemo, onOpen, onOpenSeiyuu,
+  onClose, onSet, onRate, onDate, onRewatch, onProgress, onMemo, onOpen, onOpenSeiyuu, onSnapshot,
 }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
@@ -20,7 +20,11 @@ function DetailModal({
     setData(null);
     setErr(null);
     gql(DETAIL_QUERY, { id })
-      .then((d) => live && setData(d.Media))
+      .then((d) => {
+        if (!live) return;
+        setData(d.Media);
+        if (d.Media) onSnapshot?.(d.Media.id, snapshotFields(d.Media)); // no-op if untracked
+      })
       .catch((e) => live && setErr(e.message));
     return () => { live = false; };
   }, [id]);

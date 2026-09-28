@@ -168,7 +168,10 @@ In the Vite/local build, `src/main.jsx` shims this onto `localStorage` (see prov
   progress: number,        // episodes watched
   rewatchCount: number,
   memo: string,
-  updatedAt: number        // Date.now(), maintained by mutate()
+  studios: string[],       // v5, optional — main studio names (snapshot)
+  genres: string[],        // v5, optional — AniList genre keys (snapshot)
+  titleKana: string,       // v5, optional — reading from Annict Work.titleKana
+  updatedAt: number        // Date.now(), maintained by mutate(); NOT bumped by snapshot refreshes
 }
 ```
 
@@ -315,7 +318,7 @@ The user is **explicitly open to token-based login** for this. Full spec:
 1. `TmdbSection`'s first render for an unmatched show does search → `onMap` → early-return, relying on the prop change to re-trigger the effect for the detail fetch. It works but is subtle — refactor candidate (single async flow), keep the "match once, cache forever" behavior.
 2. Seiyuu role lists show one row per character-media edge; long-running franchises repeat across seasons. Intentional (it shows the actual role history) but could gain optional grouping.
 3. ~~`MemoBox` saves on blur only~~ — **resolved 2026-09**: debounced autosave (800 ms) + flush on blur, unmount, `visibilitychange`→hidden and `pagehide` (via `flushSync`, so the localStorage write lands before iOS freezes the page).
-4. Ledger entries snapshot title/cover at save time and never refresh from AniList (feature: stability; bug: stale covers if AniList changes URLs). A lazy refresh on detail-open would fix it.
+4. ~~Ledger entries never refresh their snapshot~~ — **resolved 2026-09**: opening the detail modal refreshes title/cover/format/season/episodes/studios/genres via `refreshSnapshot` (utils `snapshotFields`), which deliberately does **not** bump `updatedAt` (that field means "user changed something" and feeds Annict conflict proposals).
 5. In-browser babel-standalone in the HTML build means a visible compile pause on slow devices — acceptable for the fallback artifact, irrelevant post-Vite.
 6. `search` view ignores format/genre filters by design (only the R18 filter applies) — revisit only with UI that makes active-filter state obvious.
 7. Decade browsing + タイトル順 sort exposes AniList's odd native-title collation for numeric-leading titles — upstream, not ours.

@@ -13,7 +13,7 @@ import {
 } from "./constants.js";
 import { defaultTmdbKey } from "./env.js";
 import { gql, buildBrowseQuery, buildSearchQuery, PER_PAGE, MAX_AUTO_PAGES } from "./api/anilist.js";
-import { today, currentSeason, seasonJa } from "./utils.js";
+import { today, currentSeason, seasonJa, snapshotFields } from "./utils.js";
 import {
   STORE_KEY, SETTINGS_KEY, TMDBMAP_KEY, ANNICTMAP_KEY, LASTEXPORT_KEY, BACKUPSNOOZE_KEY,
   storageGetJson, storageSetJson,
@@ -204,12 +204,7 @@ export default function App() {
       else {
         next[media.id] = {
           id: media.id,
-          title: media.title,
-          cover: media.coverImage?.large || media.cover,
-          format: media.format,
-          season: media.season,
-          seasonYear: media.seasonYear,
-          episodes: media.episodes,
+          ...snapshotFields(media),
           ...cur,
           ...updated,
           updatedAt: Date.now(),
@@ -219,6 +214,22 @@ export default function App() {
       return next;
     });
   };
+
+  /* Refresh an existing entry's snapshot fields from fresh data (detail
+     modal load, Annict details) WITHOUT bumping updatedAt — updatedAt means
+     "the user changed something" and drives Annict sync conflict proposals.
+     Fixes stale covers (HANDOFF §11 #4) and backfills studios/genres/kana. */
+  const refreshSnapshot = (id, patch) =>
+    setEntries((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      const changed = Object.entries(patch).filter(
+        ([k, v]) => v !== undefined && JSON.stringify(cur[k]) !== JSON.stringify(v));
+      if (!changed.length) return prev;
+      const next = { ...prev, [id]: { ...cur, ...Object.fromEntries(changed) } };
+      storageSetJson(STORE_KEY, next);
+      return next;
+    });
 
   const setStatus = (media) => (status) =>
     mutate(media, (cur) => {
@@ -724,6 +735,7 @@ export default function App() {
           onRewatch={(n) => setRewatch(detailMedia())(n)}
           onProgress={(p) => setProgress(detailMedia())(p)}
           onMemo={(m) => setMemo(detailMedia())(m)}
+          onSnapshot={refreshSnapshot}
         />
       )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { STATUSES } from "../constants.js";
 import { findAnnictWork, resolveWorkIds, fetchLibrary, pushStatus } from "../api/annict.js";
 import { fetchMediaByIds, fetchMediaByMalIds } from "../api/anilist.js";
+import { snapshotFields } from "../utils.js";
 import { buildSyncPlan, STATUS_TO_ANNICT, ANNICT_TO_STATUS } from "../sync.js";
 
 /* ---------- Annict two-way status sync (HANDOFF §10.1 write features) ----------
@@ -191,12 +192,7 @@ function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onClose }) {
               : {
                   id: media.id,
                   status: ANNICT_TO_STATUS[r.state],
-                  title: media.title,
-                  cover: media.coverImage?.large,
-                  format: media.format,
-                  season: media.season,
-                  seasonYear: media.seasonYear,
-                  episodes: media.episodes,
+                  ...snapshotFields(media),
                   updatedAt: Date.now(),
                 }
           );

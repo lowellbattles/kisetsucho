@@ -72,7 +72,24 @@ function infoLinks(media) {
   ).slice(0, 6);
 }
 
+/* Ledger snapshot of an AniList media object (HANDOFF §5 entry fields).
+   Missing / null values are left out so a partial media object (a ledger
+   stub, an airing show with no episode count yet) never wipes stored data. */
+function snapshotFields(media) {
+  const f = {
+    title: media.title,
+    cover: media.coverImage?.large || media.cover,
+    format: media.format,
+    season: media.season,
+    seasonYear: media.seasonYear,
+    episodes: media.episodes,
+    studios: media.studios?.nodes?.map((n) => n.name),
+    genres: media.genres,
+  };
+  return Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== null));
+}
+
 export {
-  stripHtml, today, currentSeason, seasonJa, fmtFuzzyDate,
+  snapshotFields, stripHtml, today, currentSeason, seasonJa, fmtFuzzyDate,
   airDateLine, officialLink, anilistStreamingLinks, infoLinks,
 };
