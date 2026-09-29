@@ -174,6 +174,76 @@ const fetchMediaByMalIds = (malIds) => chunkedMediaLookup(BY_MAL_IDS_QUERY, malI
 /* AniList ids → airing data for works still releasing / upcoming. */
 const fetchAiringByIds = (ids) => chunkedMediaLookup(AIRING_QUERY, ids, (m) => m.id);
 
+/* ---------- 他サービスから取り込む ---------- */
+
+const IMPORT_MEDIA_FIELDS = `
+  id
+  idMal
+  title { native romaji english }
+  coverImage { large }
+  format
+  season
+  seasonYear
+  episodes
+  isAdult
+  studios(isMain: true) { nodes { name } }
+  genres
+`;
+
+const USER_LIST_QUERY = `
+query ($user: String, $chunk: Int) {
+  MediaListCollection(userName: $user, type: ANIME, chunk: $chunk, perChunk: 500) {
+    hasNextChunk
+    lists {
+      isCustomList
+      entries {
+        status
+        score(format: POINT_10_DECIMAL)
+        progress
+        repeat
+        notes
+        completedAt { year month day }
+        media { ${IMPORT_MEDIA_FIELDS} }
+      }
+    }
+  }
+}`;
+
+/* A public AniList user's whole anime list (no login — private lists
+   fail). Custom lists repeat entries from the status lists, so they're
+   skipped. Chunked ×500 with the usual 700 ms pause. */
+async function fetchUserList(userName) {
+  const out = [];
+  for (let chunk = 1; chunk <= 20; chunk++) {
+    if (chunk > 1) await new Promise((r) => setTimeout(r, 700));
+    let d;
+    try {
+      d = await gql(USER_LIST_QUERY, { user: userName, chunk });
+    } catch (e) {
+      if (/private/i.test(e.message)) throw new Error("このユーザーのリストは非公開です（AniListのプライバシー設定）。");
+      if (/not found/i.test(e.message)) throw new Error("AniListユーザーが見つかりません。ユーザー名を確認してください。");
+      throw e;
+    }
+    const col = d.MediaListCollection;
+    for (const list of col?.lists || []) if (!list.isCustomList) out.push(...list.entries);
+    if (!col?.hasNextChunk) break;
+  }
+  return out;
+}
+
+const SEARCH_CANDIDATES_QUERY = `
+query ($q: String) {
+  Page(perPage: 5) {
+    media(search: $q, type: ANIME, sort: SEARCH_MATCH) { ${IMPORT_MEDIA_FIELDS} }
+  }
+}`;
+
+/* Title → up to 5 AniList candidates, best match first (text import). */
+async function searchCandidates(title) {
+  const d = await gql(SEARCH_CANDIDATES_QUERY, { q: title });
+  return d.Page?.media || [];
+}
+
 async function gql(query, variables) {
   const res = await fetch(API, {
     method: "POST",
@@ -182,7 +252,12 @@ async function gql(query, variables) {
   });
   if (res.status === 429)
     throw new Error("リクエストが多すぎます。1分ほど待ってから再試行してください。（API rate limit）");
-  if (!res.ok) throw new Error(`AniList API error (${res.status})`);
+  if (!res.ok) {
+    // keep AniList's own reason when it sends one (e.g. "User not found")
+    let msg = `AniList API error (${res.status})`;
+    try { msg = (await res.json()).errors?.[0]?.message || msg; } catch { /* non-JSON body */ }
+    throw new Error(msg);
+  }
   const json = await res.json();
   if (json.errors) throw new Error(json.errors[0]?.message || "GraphQL error");
   return json.data;
@@ -190,5 +265,6 @@ async function gql(query, variables) {
 
 export {
   gql, buildBrowseQuery, buildSearchQuery, DETAIL_QUERY, STAFF_QUERY,
-  fetchMediaByIds, fetchMediaByMalIds, fetchAiringByIds, PER_PAGE, MAX_AUTO_PAGES,
+  fetchMediaByIds, fetchMediaByMalIds, fetchAiringByIds, fetchUserList, searchCandidates,
+  PER_PAGE, MAX_AUTO_PAGES,
 };

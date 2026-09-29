@@ -143,6 +143,8 @@ check("plan: new vs existing", plan.add.map((e) => e.id).join() === "3" && plan.
 check("plan: same flag", plan.existing.find((x) => x.incoming.id === 1).same === true &&
   plan.existing.find((x) => x.incoming.id === 2).same === false);
 check("plan: duplicate row — first wins", plan.add[0].status === "want");
+check("plan: fields the import lacks don't count as differences",
+  planImport([{ id: 1, status: "watched" }], ledger).existing[0].same === true);
 const merged = mergeOverwrite(ledger[1], { id: 1, status: "dnf" });
 check("overwrite keeps local-only fields", merged.status === "dnf" && merged.memo === "local memo");
 

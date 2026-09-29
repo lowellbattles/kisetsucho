@@ -173,8 +173,11 @@ function parseTitleList(text) {
 /* planImport(incoming, entries) → { add, existing }
    - add:      entries not in the ledger yet
    - existing: [{ incoming, current, same }] — kept by default; the UI lets
-               the user flip each (or all) to 上書き. `same` = status,
-               rating, progress and completion date already match. */
+               the user flip each (or all) to 上書き. `same` = every
+               tracked field the import actually carries (status, rating,
+               progress, completion date) already matches — a text import
+               with only a status doesn't "differ" by lacking a rating,
+               since 上書き would keep it anyway (mergeOverwrite). */
 function planImport(incoming, entries) {
   const add = [];
   const existing = [];
@@ -185,7 +188,7 @@ function planImport(incoming, entries) {
     const current = entries[e.id];
     if (!current) { add.push(e); continue; }
     const same = ["status", "rating", "progress", "completedDate"].every(
-      (k) => (e[k] ?? null) === (current[k] ?? null));
+      (k) => e[k] === undefined || e[k] === current[k]);
     existing.push({ incoming: e, current, same });
   }
   return { add, existing };

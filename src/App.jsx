@@ -29,6 +29,7 @@ import SettingsModal from "./components/SettingsModal.jsx";
 import SyncModal from "./components/SyncModal.jsx";
 import StatsView from "./components/StatsView.jsx";
 import CalendarView from "./components/CalendarView.jsx";
+import ImportModal from "./components/ImportModal.jsx";
 
 /* ---------- main app ---------- */
 
@@ -66,6 +67,7 @@ export default function App() {
   const [settings, setSettings] = useState(() => ({ tmdbKey: defaultTmdbKey() }));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
   const [annictMap, setAnnictMap] = useState({});
   const [kanaJob, setKanaJob] = useState(null); // { label, n, total } while 読みがなを取得 runs
@@ -251,6 +253,16 @@ export default function App() {
   const setMemo = (media) => (memo) => mutate(media, (cur) => (cur ? { memo } : undefined));
   const setProgress = (media) => (progress) => mutate(media, () => ({ progress }));
   const setRewatch = (media) => (rewatchCount) => mutate(media, () => ({ rewatchCount }));
+
+  /* batch write of whole entries (Annict pull, 他サービス import) — callers
+     build complete entries and set updatedAt themselves */
+  const applyEntries = (list) =>
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const e of list) next[e.id] = e;
+      storageSetJson(STORE_KEY, next);
+      return next;
+    });
 
   /* export / import */
   const exportLedger = () => {
@@ -704,6 +716,7 @@ export default function App() {
               {settings.annictToken && (
                 <button className="toolbar-btn" onClick={() => setSyncOpen(true)}>Annictと同期</button>
               )}
+              <button className="toolbar-btn subtle" onClick={() => setImportOpen(true)}>他サービスから取り込む</button>
               <button className="toolbar-btn subtle" onClick={exportLedger}>エクスポート</button>
               <button className="toolbar-btn subtle" onClick={() => fileRef.current?.click()}>インポート</button>
               <input
@@ -837,15 +850,16 @@ export default function App() {
           token={settings.annictToken}
           onMap={updateAnnictMap}
           onSnapshot={refreshSnapshot}
-          onApplyPull={(list) =>
-            setEntries((prev) => {
-              const next = { ...prev };
-              for (const e of list) next[e.id] = e;
-              storageSetJson(STORE_KEY, next);
-              return next;
-            })
-          }
+          onApplyPull={applyEntries}
           onClose={() => setSyncOpen(false)}
+        />
+      )}
+
+      {importOpen && (
+        <ImportModal
+          entries={entries}
+          onApply={(list) => { applyEntries(list); setIoMsg(`${list.length}件を取り込みました`); }}
+          onClose={() => setImportOpen(false)}
         />
       )}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useId } from "react";
 import Modal from "./Modal.jsx";
+import SyncSection from "./ListSection.jsx";
 import { STATUSES } from "../constants.js";
 import { fetchWorkMeta, resolveAnnictMapGaps, fetchLibrary, pushStatus } from "../api/annict.js";
 import { fetchMediaByMalIds } from "../api/anilist.js";
@@ -33,21 +34,6 @@ function fmtDate(t) {
   return Number.isNaN(d.getTime())
     ? "日時不明"
     : `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function SyncSection({ label, hint, count, defaultOpen, children }) {
-  const [open, setOpen] = useState(!!defaultOpen);
-  return (
-    <div className="sync-block">
-      <button className="sync-head" onClick={() => setOpen(!open)} disabled={count === 0}>
-        <span>{label} <span className="en-hint">{hint}</span></span>
-        <span className="sync-count">
-          <b>{count}</b>件{count > 0 && <span className="sync-caret">{open ? "▾" : "▸"}</span>}
-        </span>
-      </button>
-      {open && count > 0 && <ul className="sync-list">{children}</ul>}
-    </div>
-  );
 }
 
 function SyncModal({ entries, annictMap, token, onMap, onApplyPull, onSnapshot, onClose }) {
