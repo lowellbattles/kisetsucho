@@ -30,6 +30,7 @@ import SyncModal from "./components/SyncModal.jsx";
 import StatsView from "./components/StatsView.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import ImportModal from "./components/ImportModal.jsx";
+import ThemesExportModal from "./components/ThemesExportModal.jsx";
 
 /* ---------- main app ---------- */
 
@@ -68,6 +69,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [themesOpen, setThemesOpen] = useState(false);
   const [tmdbMap, setTmdbMap] = useState({});
   const [annictMap, setAnnictMap] = useState({});
   const [kanaJob, setKanaJob] = useState(null); // { label, n, total } while 読みがなを取得 runs
@@ -717,6 +719,8 @@ export default function App() {
                 <button className="toolbar-btn" onClick={() => setSyncOpen(true)}>Annictと同期</button>
               )}
               <button className="toolbar-btn subtle" onClick={() => setImportOpen(true)}>他サービスから取り込む</button>
+              <button className="toolbar-btn subtle" onClick={() => setThemesOpen(true)}
+                disabled={Object.keys(entries).length === 0}>主題歌リスト</button>
               <button className="toolbar-btn subtle" onClick={exportLedger}>エクスポート</button>
               <button className="toolbar-btn subtle" onClick={() => fileRef.current?.click()}>インポート</button>
               <input
@@ -863,8 +867,12 @@ export default function App() {
         />
       )}
 
+      {themesOpen && (
+        <ThemesExportModal entries={entries} listTab={listTab} onClose={() => setThemesOpen(false)} />
+      )}
+
       <footer className="footer">
-        データ提供：AniList ・ 日本語あらすじ：TMDB ・ 配信情報：JustWatch（TMDB経由）・ 放送情報：Annict ・ 記録はこのブラウザに保存されます（エクスポートでバックアップ可能）
+        データ提供：AniList ・ 日本語あらすじ：TMDB ・ 配信情報：JustWatch（TMDB経由）・ 主題歌：AnimeThemes ・ 放送情報：Annict ・ 記録はこのブラウザに保存されます（エクスポートでバックアップ可能）
       </footer>
     </div>
   );
