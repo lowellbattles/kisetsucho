@@ -6,6 +6,7 @@ import { snapshotFields, seasonJa, airDateLine, officialLink, infoLinks, anilist
 import { StatusButtons, ProgressControls, WatchedControls, MemoBox } from "./controls.jsx";
 import TmdbSection from "./TmdbSection.jsx";
 import AnnictSection from "./AnnictSection.jsx";
+import ThemesSection from "./ThemesSection.jsx";
 
 /* ---------- detail modal ---------- */
 
@@ -105,6 +106,8 @@ function DetailModal({
               anilistDescription={data.description}
               anilistStreams={anilistStreamingLinks(data)}
             />
+
+            <ThemesSection media={data} />
 
             <AnnictSection
               media={data}

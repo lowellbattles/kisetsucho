@@ -4,6 +4,7 @@ import {
   parseMalXml, mapMalRow, mapAniListEntry, parseTitleList, planImport, mergeOverwrite,
   malDate, looseDate, showName,
 } from "../src/importers.js";
+import { parseJikanTheme } from "../src/api/animethemes.js";
 
 let bad = 0;
 let total = 0;
@@ -147,6 +148,15 @@ check("plan: fields the import lacks don't count as differences",
   planImport([{ id: 1, status: "watched" }], ledger).existing[0].same === true);
 const merged = mergeOverwrite(ledger[1], { id: 1, status: "dnf" });
 check("overwrite keeps local-only fields", merged.status === "dnf" && merged.memo === "local memo");
+
+/* ---------- 主題歌: Jikan theme strings (api/animethemes.js) ---------- */
+const j1 = parseJikanTheme('1: "Yuusha (勇者)" by YOASOBI (eps 1-16)', 0);
+check("jikan: kanji title from parens, index kept", j1.n === 1 && j1.ja === "勇者" && j1.artistJa === null);
+const j2 = parseJikanTheme('"Kick Back" by Kenshi Yonezu (米津玄師)', 4);
+check("jikan: no index → position, kanji artist", j2.n === 5 && j2.ja === null && j2.artistJa === "米津玄師");
+const j3 = parseJikanTheme('#2: "アイドル" by YOASOBI (eps 1-11, 13)', 0);
+check("jikan: title already Japanese, #n form", j3.n === 2 && j3.ja === "アイドル");
+check("jikan: junk → null", parseJikanTheme("no quotes here", 0) === null);
 
 console.log(`import: ${total - bad}/${total} fixture checks OK`);
 if (bad) process.exit(1);
