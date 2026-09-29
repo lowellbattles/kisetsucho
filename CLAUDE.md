@@ -11,6 +11,7 @@ npm run build              # production build (must pass before commit)
 npm run check:queries      # §9.2 query-builder brace balance (all 26 combinations)
 npm run check:sync         # sync-plan fixture checks (src/sync.js diff logic)
 npm run check:ledger       # export/import migration fixture checks (src/ledger.js) — v4 + v5 files
+npm run check:import       # 他サービス import fixtures (src/importers.js) — MAL XML, AniList, Netflix CSV
 npm run build:standalone   # regenerate standalone dist-standalone/kisetsucho.html (keyless by design)
 ```
 
@@ -44,7 +45,7 @@ React 18 SPA, modular since the 2026-07 refactor. `src/App.jsx` (~860 lines) is 
 ## Verification before any commit (HANDOFF §9)
 
 1. `npm run build` passes; dev console clean.
-2. `npm run check:queries` → 26/26 balanced (committed port of the HANDOFF §9 snippet); `npm run check:sync` and `npm run check:ledger` pass.
+2. `npm run check:queries` → 26/26 balanced (committed port of the HANDOFF §9 snippet); `npm run check:sync`, `npm run check:ledger` and `npm run check:import` pass.
 3. Smoke test: browse current season → track a show through 視聴中→視聴済 with rating/memo → reload persists → detail modal shows JA synopsis + attributed 配信（日本） → seiyuu link round-trip → ledger grouping → export/import round-trip → 統計 renders.
 4. A pre-change export file still imports cleanly.
 

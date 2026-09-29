@@ -36,6 +36,7 @@ jobs:
           npm run check:queries
           npm run check:sync
           npm run check:ledger
+          npm run check:import
 
       - name: Build
         run: npm run build

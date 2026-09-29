@@ -11,7 +11,8 @@
     "check:sync": "node scripts/check-sync.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:ledger": "node scripts/check-ledger.mjs"
+    "check:ledger": "node scripts/check-ledger.mjs",
+    "check:import": "node scripts/check-import.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
