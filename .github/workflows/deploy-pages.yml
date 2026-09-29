@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+# Builds the Vite app and publishes dist/ to https://lowellbattles.github.io/kisetsucho/
+# The fixture checks gate the deploy (CLAUDE.md verification). VITE_TMDB_KEY comes
+# from the repo secret of the same name — note it ends up readable in the shipped
+# JS bundle (accepted tradeoff for a free personal TMDB key, DEPLOY.md). The
+# Annict token is never involved: it lives only in each browser's storage.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]      # doc-only commits don't redeploy
+  workflow_dispatch: {}          # manual run button
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fixture checks
+        run: |
+          npm run check:queries
+          npm run check:sync
+          npm run check:ledger
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_TMDB_KEY: ${{ secrets.VITE_TMDB_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

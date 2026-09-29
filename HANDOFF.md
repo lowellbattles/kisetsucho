@@ -297,7 +297,7 @@ The user is **explicitly open to token-based login** for this. Full spec:
   - Design as **explicit opt-in two-way sync** with a visible sync button before attempting anything automatic; conflict rule proposal: most-recent-`updatedAt` wins, surfaced to the user.
 - ⚠️ **Unverified risk:** whether api.annict.com sends CORS headers for browser calls is unknown (community usage is mostly server-side/GAS). Test first with a bare fetch. If blocked: dev = Vite proxy (`server.proxy` in `vite.config.js` mapping `/annict` → `https://api.annict.com`); prod = a serverless proxy function (Netlify/Vercel) that forwards the request with the token. Do not ship the token through any third-party proxy.
 
-### P2 — Deployment (iPhone access)
+### P2 — Deployment (iPhone access) — GitHub Pages chosen 2026-09 (see DEPLOY.md)
 - Static deploy (Netlify / Vercel / GitHub Pages) — no backend needed for current features; env var for the TMDB key at build time.
 - Add PWA manifest + icons so it installs to the iPhone home screen; consider a service worker for shell caching (data stays live).
 - Storage on iPhone Safari: localStorage persists per-origin but iOS can evict storage for rarely-used sites — surface a gentle periodic "エクスポートでバックアップ" reminder, and note this is another argument for Annict-as-backend.

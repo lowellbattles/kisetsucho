@@ -1,20 +1,20 @@
 # DEPLOY.md — publishing 季節帳
 
-Getting the app onto the web (Vercel) and onto an iPhone home screen. Vite is zero-config on Vercel — no `vercel.json`, no build settings to fill in.
+Getting the app onto the web and onto an iPhone home screen. **Current host: GitHub Pages** at <https://lowellbattles.github.io/kisetsucho/> (same setup as the user's other projects). The build uses relative asset paths (`base: "./"` in `vite.config.js`), so the same build also works at a domain root — Vercel remains a drop-in alternative (§5).
 
-## 1. Publish to Vercel
+## 1. GitHub Pages (current)
 
-**Route A — CLI, no GitHub needed**
+How it works: `.github/workflows/deploy-pages.yml` runs on every push to `main` (doc-only `*.md` commits are skipped; there's also a manual **Run workflow** button under Actions). It installs, runs the three fixture checks, builds with `VITE_TMDB_KEY` from the repo secret, and publishes `dist/` via GitHub's Pages deploy action. A failing check stops the deploy.
 
-1. From the project folder: `npx vercel` — the first run walks you through login and project linking interactively (accept the detected Vite defaults). This gives a preview URL.
-2. `npx vercel --prod` publishes to the real production URL.
+One-time setup (already done if the site is live):
 
-**Route B — GitHub import, auto-deploy**
+1. Public repo `lowellbattles/kisetsucho` (free-plan Pages needs a public repo; the TMDB key has never been committed, `.env.local` and the chat-era source drops are gitignored).
+2. Repo secret: `gh secret set VITE_TMDB_KEY` (or Settings → Secrets and variables → Actions).
+3. Pages source = GitHub Actions: `gh api repos/lowellbattles/kisetsucho/pages -X POST -f build_type=workflow` (or Settings → Pages → Source: GitHub Actions).
 
-1. Push the repo to GitHub, then on vercel.com: Add New → Project → import the repo. Vite is detected automatically.
-2. From then on, every push to `main` deploys.
+**TMDB key visibility:** any `VITE_*` value is baked readable into the shipped JS bundle, so anyone with the URL could extract it. That's the accepted tradeoff for this free personal key — if it ever bothers you, rotate it at themoviedb.org → Settings → API and update the secret. The Annict token is different: it is entered at runtime in ⚙ and stored only in the browser, never in the bundle.
 
-**TMDB key (either route):** Vercel dashboard → the project → Settings → Environment Variables → add `VITE_TMDB_KEY` with your key, then redeploy. Be aware: any `VITE_*` value is baked readable into the shipped JS bundle, so anyone with the URL could extract it. That's the accepted tradeoff for this free personal TMDB key — if it ever bothers you, rotate it at themoviedb.org → Settings → API. The Annict token is different: it is entered at runtime in ⚙ and stored only in the browser, never in the bundle.
+**Shared origin — know this:** every project under `lowellbattles.github.io` shares **one browser origin**, so they share localStorage (one ~5 MB quota) and each project's JavaScript could read the others' keys, including `kisetsucho:settings` (Annict token). All keys here are `kisetsucho:`-namespaced, so nothing collides — the concern is isolation, not overwriting. The fix, if wanted later, is a custom domain (e.g. `kisetsucho.example.com`) — it gets its own origin. Moving origins means export → import once.
 
 ## 2. iPhone home-screen install
 
@@ -33,7 +33,13 @@ Safari で本番URLを開く → 共有（share）→「ホーム画面に追加
 
 ## 4. Updating
 
-- Route A: run `npx vercel --prod` again.
-- Route B: push to `main`.
+Push to `main`. Watch it under the repo's **Actions** tab (~1 min). The service worker fetches the shell network-first, so a new deploy shows up on the next launch with a connection; cached copies only serve when offline.
 
-The service worker fetches the shell network-first, so a new deploy shows up on the next launch with a connection; cached copies only serve when offline.
+## 5. Alternative: Vercel
+
+Still works unchanged (relative paths are fine at a domain root) and gives the app its own origin plus room for a serverless proxy (e.g. for Syoboi Calendar, which blocks browser calls).
+
+- **CLI:** `npx vercel` (login + link, accept Vite defaults) → `npx vercel --prod`.
+- **GitHub import:** vercel.com → Add New → Project → import `lowellbattles/kisetsucho`; every push to `main` deploys.
+- TMDB key: Vercel → project → Settings → Environment Variables → `VITE_TMDB_KEY`, then redeploy.
+- Moving hosts = new origin = export on the old site, import on the new one.

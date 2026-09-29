@@ -3,6 +3,9 @@
    are never intercepted, so live data stays live. Registered only from the
    deployed http(s) production build — see the guard in index.html. */
 const CACHE = "kisetsucho-shell-v1";
+// Hashed build assets live next to sw.js — /assets/ at a domain root,
+// /kisetsucho/assets/ on GitHub Pages. Derive it instead of hard-coding.
+const ASSETS_PATH = new URL("./assets/", self.location).pathname;
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -24,7 +27,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // third-party APIs: untouched
 
-  if (url.pathname.startsWith("/assets/")) {
+  if (url.pathname.startsWith(ASSETS_PATH)) {
     // Hashed build assets: cache-first (a given filename never changes content).
     event.respondWith(
       (async () => {

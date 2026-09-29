@@ -31,20 +31,20 @@ let html = readFileSync(join(tmp, "index.html"), "utf8");
 
 // Inline the single JS chunk (escape "</script>" inside the bundle, if any).
 html = html.replace(
-  /<script type="module"[^>]*src="\/?(assets\/[^"]+\.js)"[^>]*><\/script>/,
+  /<script type="module"[^>]*src="(?:\.?\/)?(assets\/[^"]+\.js)"[^>]*><\/script>/,
   (_, p) => `<script type="module">\n${readFileSync(join(tmp, p), "utf8").replace(/<\/script>/g, "<\\/script>")}\n</script>`
 );
 
 // Inline the CSS asset.
 html = html.replace(
-  /<link rel="stylesheet"[^>]*href="\/?(assets\/[^"]+\.css)"[^>]*>/,
+  /<link rel="stylesheet"[^>]*href="(?:\.?\/)?(assets\/[^"]+\.css)"[^>]*>/,
   (_, p) => `<style>\n${readFileSync(join(tmp, p), "utf8")}\n</style>`
 );
 
 // Drop the external favicon reference — keep the file fully self-contained.
 html = html.replace(/\s*<link rel="icon"[^>]*>/, "");
 
-if (/src="\/?assets\//.test(html) || /href="\/?assets\//.test(html)) {
+if (/src="(?:\.?\/)?assets\//.test(html) || /href="(?:\.?\/)?assets\//.test(html)) {
   throw new Error("un-inlined asset reference remains — inspect " + tmp);
 }
 
