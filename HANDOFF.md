@@ -149,6 +149,7 @@ In the Vite/local build, `src/main.jsx` shims this onto `localStorage` (see prov
 |---|---|
 | `kisetsucho:entries` | the ledger — `{ [anilistId]: Entry }` |
 | `kisetsucho:settings` | `{ tmdbKey: string }` (extend here for Annict token) |
+| `kisetsucho:themes` | 主題歌 cache (2026-09): `{ [anilistId]: { themes: [{slug, type, sequence, title, artists, episodes, url}], ja?: {OP: {n: {ja, artistJa}}, ED: {...}}, at, final } }` — device-only, never exported; finished works don't refetch, airing ones after 7 days, unlisted after 30 |
 | `kisetsucho:tmdbmap` | `{ [anilistId]: {id, type: "tv"\|"movie", season?} \| {none: true} }` — `season` (2026-09): undefined = not decided yet (auto-pick by air date, then cached), `null` = whole series, n = TMDB season n |
 
 **Entry schema** (fields optional unless noted):
@@ -211,7 +212,19 @@ Import also accepts a bare entries map for resilience. Export building and impor
 - **JustWatch attribution is a legal requirement of TMDB's terms**: provider data must be attributed to JustWatch, and links should go to TMDB/JustWatch pages, not scraped deep links. Implemented as the 配信情報：JustWatch提供（TMDB経由） line + link. **Never remove this.** Footer carries attribution too.
 - Known quirks: multi-cour series share one TMDB overview (series-level, not per-cour — see roadmap §10.3); JA overview coverage thins for obscure/old OVAs (labeled EN fallback handles it); JustWatch coverage in JP skews toward international services (dアニメストア/U-NEXT presence is inconsistent) — the UI carries a caveat, keep it.
 
-### 6.3 JustWatch directly — investigated, rejected
+### 6.3 AnimeThemes + Jikan (主題歌 — no key)
+
+- **AnimeThemes** (`https://api.animethemes.moe/anime`) — OP/ED songs, artists, episode ranges, video pages. CORS-open (verified from the Pages origin 2026-09). Looked up **by AniList id in batches**: `filter[has]=resources&filter[site]=AniList&filter[external_id]=a,b,c&include=resources,animethemes.song.artists,animethemes.animethemeentries&page[size]=100`. Rate limit 90 req/min (header `x-ratelimit-limit`). Song titles are **romanized**. Attribution line 主題歌データ：AnimeThemes wherever themes render (detail modal, export, footer).
+- **Jikan** (`https://api.jikan.moe/v4/anime/{idMal}/themes`) — MyAnimeList's theme strings, which usually carry the kanji title in parentheses (`"Yuusha (勇者)" by YOASOBI (eps 1-16)`). Best-effort only: it returned 504 "MyAnimeList down" throughout 2026-09 development, and its limit is low — detail modal only, one attempt per work per session, silent fallback.
+- Streaming links are **search URLs** (YouTube / Spotify / Apple Music JP) — no logins. The playlist export writes CSV for TuneMyMusic / Soundiiz; direct Spotify playlist creation (OAuth PKCE, own app registration) is a possible later step.
+
+### 6.4 Watch-history import sources (他サービスから取り込む)
+
+- **MyAnimeList export** — the `animelist_….xml.gz` download (gunzipped in-browser via `DecompressionStream`), flat XML parsed by `src/importers.js`; joined to AniList via `idMal_in` (`fetchMediaByMalIds`).
+- **AniList public list** — `MediaListCollection(userName, type: ANIME, chunk, perChunk: 500)`, no auth; private lists / unknown users return errors whose text `gql()` now preserves.
+- **Pasted titles / Netflix viewing-history CSV** — one 5-candidate AniList search per title, ~2.1 s apart (rate limit), with a review screen. dアニメストア / Crunchyroll have no history export.
+
+### 6.5 JustWatch directly — investigated, rejected
 
 Official API is partner-contract-only ("bigger partners and clients"); unofficial wrappers are ToS-risky and unstable. TMDB is the sanctioned personal-project route. Do not add a direct JustWatch client.
 
